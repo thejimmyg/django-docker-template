@@ -1,0 +1,39 @@
+version: "3.7"
+
+services:
+  db:
+    image: postgres:alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db:/var/lib/postgresql/data
+  web:
+    build: ./web
+    volumes:
+      - ./web:/code:rw
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: 8000
+      DJANGO_SETTINGS_MODULE: mysite.settings.dev
+      STRIPE_API_SECRET_KEY: XXX
+      STRIPE_API_PUBLISHABLE_KEY: XXX
+      DATABASE_URL: postgres://postgres@db/postgres
+      AWS_ACCESS_KEY_ID: XXX
+      AWS_SECRET_ACCESS_KEY: XXX
+      AWS_STORAGE_BUCKET_NAME: XXX
+      SECRET_KEY: XXX
+      EMAIL_PORT: 465
+      EMAIL_USE_TLS: "false"
+      EMAIL_USE_SSL: "true"
+      SERVER_EMAIL: james@example.com
+      ALLOWED_HOSTS: www.example.com,example.com,localhost
+      ADMINS: james@example.com
+      DEFAULT_FROM_EMAIL: james@example.com
+      EMAIL_HOST: smtp.example.com
+      EMAIL_HOST_PASSWORD: XXX
+      EMAIL_HOST_USER: XXX
+      SERVER_EMAIL: james@example.com
+    command: /bin/sh /code/run.sh.local
+    depends_on:
+      - db

@@ -1,0 +1,7 @@
+web/freeze.txt
+web/media
+db
+docker-compose.yml
+*.py[oc]
+*.sw[op]
+__pycache__
