@@ -35,6 +35,20 @@ For email you can use the variables in `web/djangosharedsettings/email.py`. At t
 
 Your will be hosted then at http://localhost:8000 (the port may be different if you configured a different `PORT` variable).
 
+## Syntax Formatting
+
+```
+docker exec -it mysite_web_1 /usr/local/bin/autopep8 --diff -r /code/
+docker exec -it mysite_web_1 /usr/local/bin/autopep8 --in-place -r /code/
+```
+
+## Running Tests
+
+Once you've written tests, you can run them like this:
+
+```
+docker exec -it mysite_web_1 /usr/local/bin/python3 manage.py test --failfast -k mysite
+```
 
 ## Deployment
 
