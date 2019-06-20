@@ -7,12 +7,23 @@ Heroku will expect an app called `mysite-staging` to be created, along with a fr
 * `DATABASE_URL` - The database settings. This is set up by Heroku.
 * `DJANGO_SETTINGS_MODULE` - `mysite.settings.production`
 * `SECRET_KEY` -  a long (32 characters+) random string used for deriving secrets for the session cookies and other things
+
+For media in production you'll need to create an S3 bucket with suitable permissions as described in `web/djangosharedsettings/bucket.py` then set:
+
 * `AWS_STORAGE_BUCKET_NAME` - The name of the S3 bucket
 * `AWS_ACCESS_KEY_ID` - The access key ID for the bucket above
 * `AWS_SECRET_ACCESS_KEY` - The secret key for the access key above
 
-'''
-# Creating the bucket
+For email you can use the variables in `web/djangosharedsettings/email.py`. At the moment the system will use the first email specified in `ADMINS`:
+
+* `EMAIL_PORT` - e.g. `465`
+* `EMAIL_USE_TLS` - e.g. `"false"`
+* `EMAIL_USE_SSL` - e.g. `"true"`
+* `SERVER_EMAIL` - e.g. `admin@mysite.example.com`
+* `DEFAULT_FROM_EMAIL` - e.g. `admin@mysite.example.com`
+* `EMAIL_HOST` - e.g. `smtp.example.com`
+* `EMAIL_HOST_PASSWORD`
+* `EMAIL_HOST_USER`
 
 
 ## Development
