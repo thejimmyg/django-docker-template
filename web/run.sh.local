@@ -5,14 +5,45 @@ RETRIES=99
 
 until psql "$DATABASE_URL" -c "select 1" > /dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
   echo "Waiting for postgres server, $((RETRIES--)) remaining attempts..."
-  sleep 1
+  sleep 2
 done
 if [ ! -d "/code/mysite" ]; then
   echo "Creating the Django project ..."
   cd /tmp/
+  rm -rf /tmp/mysite
   /usr/local/bin/django-admin startproject mysite
   mv mysite/* /code/
   cd /code/
+  mkdir "mysite/settings/"
+  mv "mysite/settings.py" "mysite/settings/base.py"
+  cat << EOF >> "mysite/settings/base.py"
+from djangosharedsettings.db import *
+from djangosharedsettings.email import *
+from djangosharedsettings.logging import *
+from djangosharedsettings.static import *
+from djangosharedsettings.timezone import *
+
+MIDDLEWARE.insert(MIDDLEWARE.index('django.middleware.security.SecurityMiddleware')+1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+INSTALLED_APPS.insert(INSTALLED_APPS.index('django.contrib.admin'), 'storages')
+EOF
+  cat << EOF > "mysite/settings/dev.py"
+from .base import *
+
+
+DEBUG = True
+ALLOWED_HOSTS = ['*']
+EOF
+  cat << EOF > "mysite/settings/production.py"
+from .base import *
+
+
+from djangosharedsettings.security import *
+from djangosharedsettings.secret import *
+from djangosharedsettings.bucket import *
+
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+ALLOWED_HOSTS = [host.strip() for host in os.environ['ALLOWED_HOSTS'].split(',')]
+EOF
   echo "done."
 fi
 echo 'Fixing permissions on /code'
