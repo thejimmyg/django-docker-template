@@ -10,11 +10,10 @@ until psql "$DATABASE_URL" -c "select 1" > /dev/null 2>&1 || [ $RETRIES -eq 0 ];
   sleep 2
 done
 # Exit if we still can't connect after waiting about 200 seconds.
-psql "$DATABASE_URL" -c "select 1"
-echo 'Fixing permissions on /code'
-chown -R django /code
+psql "$DATABASE_URL" -c "select 1" > /dev/null
+echo "Fixing permissions on /code as `/usr/bin/whoami`"
+chown -R `/usr/bin/whoami` /code
 echo 'done'
-su django
 # Just so we know exactly what versions we are using.
 pip freeze > /code/freeze.txt
 echo "Binding to $PORT"

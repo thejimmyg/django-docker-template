@@ -4,5 +4,4 @@ dj-database-url
 django-storages
 gunicorn[gevent]
 psycopg2-binary
-stripe
 whitenoise

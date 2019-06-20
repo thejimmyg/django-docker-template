@@ -2,10 +2,18 @@
 
 Heroku will expect an app called `mysite-staging` to be created, along with a free PostgreSQL instance. The Heroku instance needs the following variables set up:
 
-* `SECRET_KEY` -  a long (32 characters+) random string used for deriving secrets for the session cookies and other things
-* `ALLOWED_HOSTS` - a comma-separated list of allowed hosts
 * `ADMINS` - a comma-separated list of emails to receive error reports
+* `ALLOWED_HOSTS` - a comma-separated list of allowed hosts
+* `DATABASE_URL` - The database settings. This is set up by Heroku.
 * `DJANGO_SETTINGS_MODULE` - `mysite.settings.production`
+* `SECRET_KEY` -  a long (32 characters+) random string used for deriving secrets for the session cookies and other things
+* `AWS_STORAGE_BUCKET_NAME` - The name of the S3 bucket
+* `AWS_ACCESS_KEY_ID` - The access key ID for the bucket above
+* `AWS_SECRET_ACCESS_KEY` - The secret key for the access key above
+
+'''
+# Creating the bucket
+
 
 ## Development
 
@@ -14,7 +22,7 @@ Heroku will expect an app called `mysite-staging` to be created, along with a fr
 3. Copy `docker-compose.yml.example` to `docker-compose.yml` and update it with the settings you want to use for development
 4. Run `docker-compose up`
 
-Your will be hosted then at http://localhost:8001 (the port may be different if you configured a different `PORT` variable.
+Your will be hosted then at http://localhost:8000 (the port may be different if you configured a different `PORT` variable).
 
 
 ## Deployment

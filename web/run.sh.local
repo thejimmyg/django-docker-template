@@ -23,13 +23,18 @@ from djangosharedsettings.logging import *
 from djangosharedsettings.static import *
 from djangosharedsettings.timezone import *
 
+
 MIDDLEWARE.insert(MIDDLEWARE.index('django.middleware.security.SecurityMiddleware')+1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 INSTALLED_APPS.insert(INSTALLED_APPS.index('django.contrib.admin'), 'storages')
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_URL = '/static/'
 EOF
   cat << EOF > "mysite/settings/dev.py"
 from .base import *
 
 
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
 DEBUG = True
 ALLOWED_HOSTS = ['*']
 EOF
@@ -47,9 +52,8 @@ EOF
   echo "done."
 fi
 echo 'Fixing permissions on /code'
-chown -R django /code
+chown -R `/usr/bin/whoami` /code
 echo 'done'
-su django
 pip freeze > /code/freeze.txt
 echo "Binding to $PORT"
 python manage.py runserver "0.0.0.0:$PORT"
