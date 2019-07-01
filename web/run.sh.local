@@ -1,12 +1,6 @@
 #!/bin/sh
 
 
-RETRIES=99
-
-until psql "$DATABASE_URL" -c "select 1" > /dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
-  echo "Waiting for postgres server, $((RETRIES--)) remaining attempts..."
-  sleep 2
-done
 if [ ! -d "/code/mysite" ]; then
   echo "Creating the Django project ..."
   cd /tmp/
@@ -15,6 +9,9 @@ if [ ! -d "/code/mysite" ]; then
   mv mysite/* /code/
   cd /code/
   mkdir "mysite/settings/"
+  mkdir -p "media"
+  mkdir -p "static"
+  mkdir -p "mysite/test"
   mv "mysite/settings.py" "mysite/settings/base.py"
   cat << EOF >> "mysite/settings/base.py"
 
@@ -25,10 +22,13 @@ from djangosharedsettings.logging import *
 from djangosharedsettings.static import *
 from djangosharedsettings.timezone import *
 
-
+ROOT_DIR = os.path.dirname(BASE_DIR)
 MIDDLEWARE.insert(MIDDLEWARE.index('django.middleware.security.SecurityMiddleware')+1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 INSTALLED_APPS.insert(INSTALLED_APPS.index('django.contrib.admin'), 'storages')
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = os.path.join(ROOT_DIR, 'static')
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
 EOF
   cat << EOF > "mysite/settings/dev.py"
 from .base import *
@@ -50,11 +50,127 @@ from djangosharedsettings.bucket import *
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 ALLOWED_HOSTS = [host.strip() for host in os.environ['ALLOWED_HOSTS'].split(',')]
 EOF
+  cat << EOF >> "mysite/urls.py"
+
+from django.conf import settings
+
+if settings.DEBUG:
+    from django.conf.urls.static import static
+    from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+
+    # Serve static and media files from development server
+    urlpatterns += staticfiles_urlpatterns()
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+EOF
+  mkdir -p mysite/templates
+  cat << EOF > "mysite/templates/base.html"
+{% load static %}
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>
+            {% block title %}
+                {% if self.title %}{{ self.title }}{% endif %}
+            {% endblock %}
+        </title>
+        <meta name="description" content="" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        {# Global stylesheets #}
+        <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
+
+        {% block extra_css %}
+            {# Override this in templates to add extra stylesheets #}
+        {% endblock %}
+    </head>
+
+    <body class="{% block body_class %}{% endblock %}">
+      {% block messages %}
+        {% if messages %}
+          <div class="messages">
+            <h3>Messages</h3>
+            <ul class="messages">
+                {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      {% endblock %}
+    <div class="content">
+      <h3>Content</h3>
+        {% block content %}{% endblock %}
+
+        {# Global javascript #}
+        <script type="text/javascript" src="{% static 'js/scripts.js' %}"></script>
+
+        {% block extra_js %}
+            {# Override this in templates to add extra javascript #}
+        {% endblock %}
+    </body>
+</html>
+EOF
+  mkdir -p "mysite/static/css" "mysite/static/js"
+  cat << EOF > "mysite/static/css/styles.css"
+.messages {
+    background-color: #CCC;
+}
+EOF
+  cat << EOF > "mysite/static/js/scripts.js"
+var elem = document.createElement('div');
+elem.innerHTML = 'JS working'
+document.body.appendChild(elem);
+EOF
+  cat << EOF >> "mysite/test/test.py"
+import json
+import os
+from django.test import TestCase
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+import time
+
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+class ExampleTests(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.browser = webdriver.Remote(
+            command_executor='http://chrome:4444/wd/hub',
+            desired_capabilities={'browserName': 'chrome', 'javascriptEnabled': True})
+        cls.browser.implicitly_wait(0)
+
+    @classmethod
+    def tearDownClass(cls):
+        # Comment this out if you don't want Chrome to quit
+        cls.browser.quit()
+        # Handy to use this line for debugging
+        # import pdb; pdb.set_trace()
+        super().tearDownClass()
+
+    def test_01_get_debug_root(self):
+        self.browser.get('http://web:8000/')
+        heading = WebDriverWait(self.browser, 20).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'h1'))
+        )
+        self.assertEqual(heading.text, "Page not found (404)")
+EOF
   echo "done."
 fi
 echo 'Fixing permissions on /code'
 chown -R `/usr/bin/whoami` /code
 echo 'done'
 pip freeze > /code/freeze.txt
+python manage.py collectstatic --noinput
+RETRIES=99
+until psql "$DATABASE_URL" -c "select 1" > /dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
+  echo "Waiting for postgres server, $((RETRIES -= 1)) remaining attempts..."
+  sleep 2
+done
+python manage.py makemigrations
+python manage.py migrate
 echo "Binding to $PORT"
 python manage.py runserver "0.0.0.0:$PORT"

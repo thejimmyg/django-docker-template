@@ -25,30 +25,56 @@ For email you can use the variables in `web/djangosharedsettings/email.py`. At t
 * `EMAIL_HOST_PASSWORD`
 * `EMAIL_HOST_USER`
 
+For instructions on how to test email sending see `EMAIL.md`.
+
 
 ## Development
 
 1. Install the latest version of Docker
 2. Clone the repo to a directory called `mysite` (if you choose a different name, Docker Compose will name the containers in a different way to the names used in the documentation).
 3. Copy `docker-compose.yml.example` to `docker-compose.yml` and update it with the settings you want to use for development
-4. Run `docker-compose up`
+
+   ```
+   cp docker-compose.yml.example docker-compose.yml
+   ```
+
+4. Run `docker-compose up --build`
 
 Your will be hosted then at http://localhost:8000 (the port may be different if you configured a different `PORT` variable).
 
-## Syntax Formatting
+
+### DB
+
+If you are starting with an empty database you'll want to set up database tables and an admin user:
+
+```
+docker exec -it mysite_web_1 /usr/local/bin/python3 manage.py migrate
+docker exec -it mysite_web_1 /usr/local/bin/python3 manage.py createsuperuser
+```
+
+
+### Syntax Formatting
 
 ```
 docker exec -it mysite_web_1 /usr/local/bin/autopep8 --diff -r /code/
 docker exec -it mysite_web_1 /usr/local/bin/autopep8 --in-place -r /code/
 ```
 
-## Running Tests
+
+### Running Tests
 
 Once you've written tests, you can run them like this:
 
 ```
-docker exec -it mysite_web_1 /usr/local/bin/python3 manage.py test --failfast -k mysite
+docker exec -it mysite_web_1 /usr/local/bin/python3 manage.py test --failfast -k mysite/test
 ```
+
+You can use VNC Viewer to view Chrome while the tests are running.
+
+https://www.realvnc.com/en/connect/download/viewer/
+
+Load the viewer and enter the address `localhost:5900` while the `chrome` docker container is running to see the testing visaully in browser. You'll need to ignore the warning about the connection being unencrypted. Then enter the password `secret`.
+
 
 ## Deployment
 

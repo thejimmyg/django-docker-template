@@ -12,7 +12,7 @@ cd myactualsite
 2. Replace all instances of `mysite` with the actual name of your project, e.g. `myactualsite`:
 
 ```
-find . -type f -name "*" | grep -v ".git" | xargs sed -i '' -e 's/mysite/runfriendly/g'
+find . -type f -name "*" | grep -v ".git" | xargs sed -i '' -e 's/mysite/myactualsite/g'
 ```
 
 3. Delete this file and replace with the real `README.md`:
