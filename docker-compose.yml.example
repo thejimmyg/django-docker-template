@@ -24,7 +24,6 @@ services:
       EMAIL_PORT: 465
       EMAIL_USE_TLS: "false"
       EMAIL_USE_SSL: "true"
-      SERVER_EMAIL: james@example.com
       ALLOWED_HOSTS: www.example.com,example.com,localhost
       ADMINS: james@example.com
       DEFAULT_FROM_EMAIL: james@example.com
