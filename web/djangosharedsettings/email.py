@@ -60,8 +60,16 @@ export SMTP_PASSWORD=`(echo -en "\x02"; echo -n 'SendRawEmail' \
 echo "Username: $SMTP_USERNAME Password: $SMTP_PASSWORD SMTP host: email-smtp.$AWS_DEFAULT_REGION.amazonaws.com TLS: True Port: 587"
 ```
 
-You can now send an email using SMTP.
+You can now send an email using SMTP to your verified email address only.
 
 **Caution: Make sure you use your *SMTP* credentials and not your AWS credentials, and make sure you use a secure TLS transport.**
 
+To enable sending more widely you need to write to AWS as described here:
+
+https://docs.aws.amazon.com/ses/latest/DeveloperGuide/request-production-access.html
+
+You'll be asked:
+My email-sending complies with the AWS Service Terms  and AUP  - optional
+I only send to recipients who have specifically requested my mail - optional
+I have a process to handle bounces and complaints - optional
 '''
