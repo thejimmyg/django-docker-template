@@ -29,6 +29,7 @@ STATIC_ROOT = os.path.join(ROOT_DIR, 'static')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
+TEMPLATES[0]['DIRS'].append(os.path.join(ROOT_DIR, 'mysite', 'templates'))
 EOF
   cat << EOF > "mysite/settings/dev.py"
 from .base import *
@@ -119,9 +120,10 @@ EOF
 }
 EOF
   cat << EOF > "mysite/static/js/scripts.js"
-var elem = document.createElement('div');
-elem.innerHTML = 'JS working'
-document.body.appendChild(elem);
+// var elem = document.createElement('div');
+// elem.innerHTML = 'JS working';
+// document.body.appendChild(elem);
+console.log('JS working');
 EOF
   cat << EOF >> "mysite/test/test.py"
 import json

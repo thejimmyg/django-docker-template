@@ -1,12 +1,34 @@
 version: "3.7"
 
 services:
+  aws:
+    build: aws
+    environment:
+      AWS_ACCESS_KEY_ID: XXX
+      AWS_SECRET_ACCESS_KEY: XXX
+  chrome:
+    image: selenium/standalone-chrome-debug:3.141.59-radium
+    volumes:
+      - /dev/shm:/dev/shm
+    ports:
+      - "5900:5900"
+      - "4444:4444"
   db:
     image: postgres:alpine
     ports:
       - "5432:5432"
     volumes:
       - ./db:/var/lib/postgresql/data
+  git:
+    build: git
+    environment:
+      GIT_COMMITTER_NAME='Your name'
+      GIT_COMMITTER_EMAIL=''
+      GIT_AUTHOR_NAME='Your name'
+      GIT_AUTHOR_EMAIL=''
+      GIT_SSH_COMMAND="ssh -i /ssh/id_rsa"
+    volumes:
+      - ./git/ssh:/ssh
   web:
     build: ./web
     volumes:
@@ -17,9 +39,9 @@ services:
       PORT: 8000
       DJANGO_SETTINGS_MODULE: mysite.settings.dev
       DATABASE_URL: postgres://postgres@db/postgres
-      AWS_ACCESS_KEY_ID: XXX
-      AWS_SECRET_ACCESS_KEY: XXX
-      AWS_STORAGE_BUCKET_NAME: XXX
+      MEDIA_AWS_ACCESS_KEY_ID: XXX
+      MEDIA_AWS_SECRET_ACCESS_KEY: XXX
+      MEDIA_AWS_STORAGE_BUCKET_NAME: XXX
       SECRET_KEY: XXX
       EMAIL_PORT: 465
       EMAIL_USE_TLS: "false"
@@ -32,12 +54,3 @@ services:
       EMAIL_HOST_USER: XXX
       SERVER_EMAIL: james@example.com
     command: /bin/bash /code/run.sh.local
-    depends_on:
-      - db
-  chrome:
-    image: selenium/standalone-chrome-debug:3.141.59-radium
-    volumes:
-      - /dev/shm:/dev/shm
-    ports:
-      - "5900:5900"
-      - "4444:4444"

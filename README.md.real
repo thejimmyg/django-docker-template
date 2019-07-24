@@ -38,26 +38,55 @@ For instructions on how to test email sending see `EMAIL.md`.
    cp docker-compose.yml.example docker-compose.yml
    ```
 
-4. Run `docker-compose up --build`
+4. Run `docker-compose up --build`.
 
 Your will be hosted then at http://localhost:8000 (the port may be different if you configured a different `PORT` variable).
 
-
-### DB
-
-If you are starting with an empty database you'll want to set up database tables and an admin user:
+Later you might find this set of commands more flexible to just run `web` and `db` containers in the background, but to see the logs in the foreground:
 
 ```
-docker exec -it mysite_web_1 /usr/local/bin/python3 manage.py migrate
-docker exec -it mysite_web_1 /usr/local/bin/python3 manage.py createsuperuser
+docker-compose down && docker-compose up --build -d web db && docker-compose logs -f web db
 ```
+
+5. Set up aliases
+
+It can be a bit tedious typing the full `docker-compose` commands you need, so you can alias them to shorter versions. You'll need to do this each time you start working in a new terminal.
+
+
+```
+alias manage.py='docker-compose -f `pwd`/docker-compose.yml run --rm web python manage.py'
+alias autopep8='docker-compose -f `pwd`/docker-compose.yml run --rm web /usr/local/bin/autopep8'
+alias aws='docker-compose -f `pwd`/docker-compose.yml run --rm aws'
+alias psql='docker-compose -f `pwd`/docker-compose.yml run --rm db psql'
+```
+
+6. Create your first app, set up the database and a super user
+
+```
+manage.py startapp experiment
+manage.py makemigrations
+manage.py migrate
+manage.py createsuperuser
+```
+
+You can connect to the PostgreSQL database using the aliased `psql` which really runs in your `db` container:
+
+```
+psql -h db -U postgres postgres
+```
+
+## Development
+
+In development remember to clear your browser cache once you've changed static files and run `manage.py collectstatic` by restarting the Docker container. Otherwise the browser will use the cached old version.
 
 
 ### Syntax Formatting
 
+Make sure the alias is set up as described above, then run `autopep8` from within the container like this:
+
 ```
-docker exec -it mysite_web_1 /usr/local/bin/autopep8 --diff -r /code/
-docker exec -it mysite_web_1 /usr/local/bin/autopep8 --in-place -r /code/
+autopep8 --diff -r /code/
+autopep8 --in-place -r /code/
 ```
 
 
@@ -66,7 +95,8 @@ docker exec -it mysite_web_1 /usr/local/bin/autopep8 --in-place -r /code/
 Once you've written tests, you can run them like this:
 
 ```
-docker exec -it mysite_web_1 /usr/local/bin/python3 manage.py test --failfast -k mysite/test
+docker-compose up -d chrome
+manage.py test --failfast -k mysite/test
 ```
 
 You can use VNC Viewer to view Chrome while the tests are running.
@@ -80,11 +110,36 @@ Load the viewer and enter the address `localhost:5900` while the `chrome` docker
 
 ### Release to Heroku
 
+#### First Time
+
+Now you'll need to setup an AWS bucket for the `media` files becuase Heroku dynos are ephemeral so you can't use a `media` directory like you would in development.
+
+The instructions for this can be found in `web/djangosharedsettings/bucket.py`.
+
+When following them, make sure you've got the aws command correctly aliased to the Docker image as described at the start of this README.
+
+Finally set up and SMTP server. If you want to use AWS SES, the instructions can be found in `web/djangosharedsettings/email.py`
+
+Now set up heroku app, a PostgreSQL instance and the correct config settings (like those you would use in `docker-compose.yml`). This command can help you set all the config settings in one go:
+
+```
+EDITOR=vim heroku config:edit --app $DEPLOYMENT_TARGET
+```
+
 Make sure static files are up to date:
 
 ```
-docker exec -it mysite_web_1 /usr/local/bin/python3 manage.py collectstatic --noinput --link
+manage.py collectstatic --noinput --link
 ```
+
+Optionally take a dump of your local database so that it will be included in your container allowing you to use it from a dyno to populate the empty database:
+
+```
+manage.py dumpdata --natural-foreign --natural-primary --indent 2 --format json > web/dump.json
+```
+
+
+#### Deploy
 
 Set the deployment target to the Heroku app name:
 
@@ -92,39 +147,50 @@ Set the deployment target to the Heroku app name:
 export DEPLOYMENT_TARGET=mysite-staging
 ```
 
-Create a new version number each time. You can find the old number like this:
-
-```
-docker images | grep $DEPLOYMENT_TARGET
-```
-
-Then export the new version:
-
-```
-export BACKEND_VERSION=0.1.1
-```
-
 Then commit any changes you want to deploy.
 
 Finally run these one at a time, otherwise they might not all get run:
 
 
+
 ```
+
+# See https://devcenter.heroku.com/articles/local-development-with-docker-compose
 heroku login
 heroku container:login
 git stash
 cd web
-docker build -t $DEPLOYMENT_TARGET:$BACKEND_VERSION .
-docker tag $DEPLOYMENT_TARGET:$BACKEND_VERSION registry.heroku.com/$DEPLOYMENT_TARGET/web
-docker push registry.heroku.com/$DEPLOYMENT_TARGET/web
-heroku container:release --app $DEPLOYMENT_TARGET web
+heroku container:push -a $DEPLOYMENT_TARGET web
+heroku container:release -a $DEPLOYMENT_TARGET web
 heroku run --type=worker -a $DEPLOYMENT_TARGET /usr/local/bin/python3 manage.py migrate
+heroku run --type=worker -a $DEPLOYMENT_TARGET /usr/local/bin/python3 manage.py loaddata /code/dump.json
+# heroku run --type=worker -a $DEPLOYMENT_TARGET /usr/local/bin/python3 manage.py createsuperuser
 git stash pop
 ```
 
 Other useful commands:
 
 ```
-heroku config --app $DEPLOYMENT_TARGET
+EDITOR=vim heroku config:edit --app $DEPLOYMENT_TARGET
 heroku logs --tail --app $DEPLOYMENT_TARGET
+```
+
+```
+# See https://devcenter.heroku.com/articles/local-development-with-docker-compose
+heroku login
+heroku container:login
+git stash
+cd web
+heroku container:push -a $DEPLOYMENT_TARGET web
+heroku container:release -a $DEPLOYMENT_TARGET web
+heroku run --type=worker -a $DEPLOYMENT_TARGET /usr/local/bin/python3 manage.py migrate
+heroku run --type=worker -a $DEPLOYMENT_TARGET /usr/local/bin/python3 manage.py loaddata /code/dump.json
+git stash pop
+```
+
+Other useful commands:
+
+```
+heroku logs --tail --app $DEPLOYMENT_TARGET
+heroku run --type=worker -a $DEPLOYMENT_TARGET /usr/local/bin/python3 manage.py createsuperuser
 ```
