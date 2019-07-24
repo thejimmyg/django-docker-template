@@ -1,0 +1,8 @@
+autopep8
+boto3
+dj-database-url
+django-storages
+gunicorn[gevent]
+psycopg2-binary
+selenium
+whitenoise

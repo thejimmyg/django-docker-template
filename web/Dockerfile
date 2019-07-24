@@ -1,11 +1,11 @@
-FROM python:3.7-alpine as runbase
+FROM alpine:3.10 as runbase
 RUN apk update
-RUN apk add --update postgresql-client libpq jpeg zlib libffi
+RUN apk add --update python3 postgresql-client libpq jpeg zlib libffi
 RUN pip3 install --upgrade pip
 
 FROM runbase as buildbase
 RUN apk update
-RUN apk add --update build-base postgresql-dev libffi-dev zlib-dev jpeg-dev
+RUN apk add --update build-base postgresql-dev libffi-dev zlib-dev jpeg-dev python3-dev
 
 FROM buildbase as pipdownload
 ENV PYTHONUNBUFFERED 1
@@ -20,8 +20,8 @@ COPY ./requirements.txt /code/requirements.txt
 RUN pip3 install -r /code/requirements.txt
 
 FROM runbase as django
-COPY --from=piplocal /usr/local/lib/python3.7/ /usr/local/lib/python3.7/
-COPY --from=piplocal /usr/local/bin/ /usr/local/bin/
+COPY --from=piplocal /usr/lib/python3.7/ /usr/lib/python3.7/
+COPY --from=piplocal /usr/bin/ /usr/bin/
 ENV PYTHONUNBUFFERED 1
 RUN adduser -D -u 1000 django
 
