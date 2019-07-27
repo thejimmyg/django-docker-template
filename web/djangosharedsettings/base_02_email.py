@@ -1,7 +1,6 @@
-import os
+from .base_01_db import *
 
-
-EMAIL_BACKEND = 'djangosharedsettings.emailbackend.LoggingBackend'
+EMAIL_BACKEND = 'mysite.emailbackend.LoggingBackend'
 ADMINS = []
 if os.environ.get('ADMINS'):
     ADMINS += [('admin', email.strip()) for email in os.environ['ADMINS'].split(',')]
@@ -72,4 +71,9 @@ You'll be asked:
 My email-sending complies with the AWS Service Terms  and AUP  - optional
 I only send to recipients who have specifically requested my mail - optional
 I have a process to handle bounces and complaints - optional
+
+
+You can then test your bounce responses etc using the mailbox simulator to make sure you don't start getting negative scores:
+
+https://docs.aws.amazon.com/ses/latest/DeveloperGuide/mailbox-simulator.html
 '''
