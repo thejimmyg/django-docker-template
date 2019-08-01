@@ -25,7 +25,7 @@ from wagtail.core import urls as wagtail_urls
 from django.views.generic.base import RedirectView
 
 
-app_name = 'teratree'
+app_name = 'mysite'
 urlpatterns = [
     # Instead, follow this pattern
     path('meeting/', include('meeting.urls')),

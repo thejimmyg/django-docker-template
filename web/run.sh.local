@@ -14,6 +14,7 @@ if [ ! -d "/code/mysite" ]; then
   mkdir -p "mysite/test"
   mv "mysite/settings.py" "mysite/settings/base.py"
   mv djangosharedsettings/* mysite/settings/
+  mv emailbackend.py mysite/
   rm -f djangosharedsettings/.DS_Store
   rmdir djangosharedsettings
   cat << EOF >> "mysite/settings/base.py"
