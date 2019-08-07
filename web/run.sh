@@ -5,7 +5,8 @@ set -e
 
 RETRIES=99
 
-until psql "$DATABASE_URL" -c "select 1" > /dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
+CONNECTION_DATABASE_URL=`echo $DATABASE_URL | sed 's|postgis://|postgres://|'`
+until psql "$CONNECTION_DATABASE_URL" -c "select 1" > /dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
   echo "Waiting for postgres server, $((RETRIES--)) remaining attempts..."
   sleep 2
 done

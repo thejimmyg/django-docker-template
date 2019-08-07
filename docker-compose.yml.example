@@ -14,6 +14,7 @@ services:
       - "5900:5900"
       - "4444:4444"
   db:
+    # image: mdillon/postgis:11-alpine
     image: postgres:alpine
     ports:
       - "5432:5432"
@@ -39,6 +40,7 @@ services:
     environment:
       PORT: 8000
       DJANGO_SETTINGS_MODULE: mysite.settings.dev
+      # DATABASE_URL: postgis://postgres@db/postgres
       DATABASE_URL: postgres://postgres@db/postgres
       MEDIA_AWS_ACCESS_KEY_ID: XXX
       MEDIA_AWS_SECRET_ACCESS_KEY: XXX

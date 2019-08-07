@@ -58,6 +58,13 @@ alias aws='docker-compose -f `pwd`/docker-compose.yml run --rm aws'
 alias psql='docker-compose -f `pwd`/docker-compose.yml run --rm db psql'
 ```
 
+and if using GeoDjango:
+
+```
+alias ogrinfo='docker-compose -f `pwd`/docker-compose.yml run --rm web ogrinfo'
+alias ogrinspect='docker-compose -f `pwd`/docker-compose.yml run --rm web ogrinspect'
+```
+
 7. Create your first app, set up the database and a super user
 
 ```
