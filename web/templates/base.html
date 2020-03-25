@@ -1,0 +1,54 @@
+{% load static %}
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>
+            {% block title %}
+                {% if self.title %}{{ self.title }}{% endif %}
+            {% endblock %}
+        </title>
+        <meta name="description" content="" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        {# Global stylesheets #}
+        <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
+
+        {% block extra_css %}
+            {# Override this in templates to add extra stylesheets #}
+        {% endblock %}
+    </head>
+
+    <body class="{% block body_class %}{% endblock %}">
+      {% block messages %}
+        {% if messages %}
+          <div class="messages">
+            <h3>Messages</h3>
+            <ul class="messages">
+                {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      {% endblock %}
+      <div class="content">
+        <p>
+          <a href="/">Home</a>
+          {% if request.user.username %}
+            <a href="{% url 'account_logout' %}">Logout</a>
+          {% else %}
+            <a href="{% url 'account_login' %}">Login</a>
+          {% endif %}
+        </p>
+        {% block content %}{% endblock %}
+
+        {# Global javascript #}
+        <script type="text/javascript" src="{% static 'js/scripts.js' %}"></script>
+
+        {% block extra_js %}
+            {# Override this in templates to add extra javascript #}
+        {% endblock %}
+      </div>
+    </body>
+</html>

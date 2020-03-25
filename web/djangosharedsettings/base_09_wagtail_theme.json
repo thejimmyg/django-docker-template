@@ -1,0 +1,13 @@
+[
+  {
+    "model": "wagtailthemes.themesettings",
+    "pk": 1,
+    "fields": {
+      "site": [
+        "localhost",
+        8000
+      ],
+      "theme": "default"
+    }
+  }
+]

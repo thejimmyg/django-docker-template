@@ -1,89 +1,91 @@
 # mysite
 
-Heroku will expect an app called `mysite-staging` to be created, along with a free PostgreSQL instance. The Heroku instance needs the following variables set up:
-
-* `ADMINS` - a comma-separated list of emails to receive error reports
-* `ALLOWED_HOSTS` - a comma-separated list of allowed hosts
-* `DATABASE_URL` - The database settings. This is set up by Heroku.
-* `DJANGO_SETTINGS_MODULE` - `mysite.settings.production`
-* `SECRET_KEY` -  a long (32 characters+) random string used for deriving secrets for the session cookies and other things
-
-For media in production you'll need to create an S3 bucket with suitable permissions as described in `web/djangosharedsettings/bucket.py` then set:
-
-* `AWS_STORAGE_BUCKET_NAME` - The name of the S3 bucket
-* `AWS_ACCESS_KEY_ID` - The access key ID for the bucket above
-* `AWS_SECRET_ACCESS_KEY` - The secret key for the access key above
-
-For email you can use the variables in `web/djangosharedsettings/email.py`. At the moment the system will use the first email specified in `ADMINS`:
-
-* `EMAIL_PORT` - e.g. `465`
-* `EMAIL_USE_TLS` - e.g. `"false"`
-* `EMAIL_USE_SSL` - e.g. `"true"`
-* `SERVER_EMAIL` - e.g. `admin@mysite.example.com`
-* `DEFAULT_FROM_EMAIL` - e.g. `admin@mysite.example.com`
-* `EMAIL_HOST` - e.g. `smtp.example.com`
-* `EMAIL_HOST_PASSWORD`
-* `EMAIL_HOST_USER`
-
-For instructions on how to test email sending see `EMAIL.md`.
-
-
 ## Development
 
 1. Install the latest version of Docker
 
 2. Clone the repo to a directory called `mysite` (if you choose a different name, Docker Compose will name the containers in a different way to the names used in the documentation).
 
-3. Copy `docker-compose.yml.example` to `docker-compose.yml` and update it with the settings you want to use for development
+3. Copy `docker-compose.yml.example` to `docker-compose.yml` and update it with the settings you want to use for development (email settings in particular are worth setting up so that you can easily confirm the email address of a superuser.
 
    ```
    cp docker-compose.yml.example docker-compose.yml
    ```
 
-4. Run `docker-compose build`
+4. Run `docker-compose build git aws; docker-compose down && COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose up --build web db && docker-compose logs -f web db`
 
-5. Run `docker-compose down && docker-compose up --build -d web db && docker-compose logs -f web db`
+The `web` container is build using the experimental BuildKit front end to cache the pip downloads so that if you change your `base-requirements.txt` file you don't have to re-download all the requirements, only the ones that have changed. This needs a recent version of Docker Compose e.g. 1.25.4. If you don't have this, follow the comments in `web/Dockerfile` to take a different approach without the caching.
 
 Your will be hosted then at http://localhost:8000 (the port may be different if you configured a different `PORT` variable).
 
-6. Set up aliases
+5. Set up aliases
 
 It can be a bit tedious typing the full `docker-compose` commands you need, so you can alias them to shorter versions. You'll need to do this each time you start working in a new terminal.
-
 
 ```
 alias manage.py='docker-compose -f `pwd`/docker-compose.yml run --rm web python3 manage.py'
 alias autopep8='docker-compose -f `pwd`/docker-compose.yml run --rm web /usr/bin/autopep8'
 alias aws='docker-compose -f `pwd`/docker-compose.yml run --rm aws'
 alias psql='docker-compose -f `pwd`/docker-compose.yml run --rm db psql'
-```
-
-and if using GeoDjango:
-
-```
 alias ogrinfo='docker-compose -f `pwd`/docker-compose.yml run --rm web ogrinfo'
 alias ogrinspect='docker-compose -f `pwd`/docker-compose.yml run --rm web ogrinspect'
+alias git='docker-compose -f `pwd`/docker-compose.yml run --rm git'
 ```
 
-7. Create your first app, set up the database and a super user
+6. Set up the database:
 
 ```
-manage.py startapp experiment
+# Checks there are no migrations to be created (there shouldn't be if you've made no changes yet)
 manage.py makemigrations
+# Set up the database
 manage.py migrate
-manage.py createsuperuser
+# Change the default site to serve from port 8000 (which is the port the `web` container uses internally.
+manage.py loaddata mysite/settings/base_09_wagtail_site.json
+# Set up the default theme for Wagtail
+manage.py loaddata mysite/settings/base_09_wagtail_theme.json
 ```
 
-You can connect to the PostgreSQL database using the aliased `psql` which really runs in your `db` container:
+7. Create a superuser
+
+This is a bit tricky because you want your superuser to be able to sign in with AllAuth so that you can disable all the other login screens like the Django admin or Wagtail CMS ones. This disabling is currently done with the redirects to /accounts/login that are set up in `mysite/urls.py`.
+
+You can work around this by enabling the admin, registering a user via the web interface, verifying the email, creating a superuser on the command line, using this second user to login to the admin to give the first user staff and superuser permissions, then loging back in as the first user to delete the second one.
+
+It is much easier to load a fixture, login and then change the email and password. You can do this like this:
+
+```
+manage.py loaddata myactualsite/settings/base_08_user.json
+```
+
+This creates a user with `me@example.com` as the email and the password `123123ab`. You can use it to log in to the admin at `/admin` and change the email in AUTHENTICATION AND AUTHORIZATION -> Users.
+
+### Notes
+
+Note the Wagtail page you see as the homepage comes directly from `Page` class which you won't use in future. You'll use a `HomePage` model instead that will use the same base template as other pages. Because you loaded the `base_09_wagtail_theme.json` fixture, the site is set up to use the `Default` theme in `mysite/templates/theme/` which overrides `wagtailcore/page.html` to use `base.html`. `base.html` overriden itself in this theme to provide Home and Login links.
+
+When you login to /cms you can change the theme in Settings->Theme.
+
+You can connect to the PostgreSQL database using the `psql` command you aliased above which really runs in your `db` container:
 
 ```
 psql -h db -U postgres postgres
 ```
 
-## Development
-
 In development remember to clear your browser cache once you've changed static files and run `manage.py collectstatic` by restarting the Docker container. Otherwise the browser will use the cached old version.
 
+### Starting an app
+
+You should do all your development in separate Django apps rather than in the generated project. This is Django best practice.
+
+With your aliases set up, create an app with:
+
+```
+manage.py startapp myapp
+```
+
+### Customise User Model
+
+If you want to extend the `User` model, the best way is by creating a new model named something like `Profile` with a `ForeignKey` to `User` rather than deriving a new model from `AbstractUser`. Then you can just access the fields using `request.user.profile` and it doesn't interfere with the way anything else uses the `User` model.
 
 ### Syntax Formatting
 
@@ -93,7 +95,6 @@ Make sure the alias is set up as described above, then run `autopep8` from withi
 autopep8 --diff --exclude /code/mysite/settings/base.py -r /code/
 autopep8 --in-place --exclude /code/mysite/settings/base.py -r /code/
 ```
-
 
 ### Running Tests
 
@@ -110,68 +111,61 @@ https://www.realvnc.com/en/connect/download/viewer/
 
 Load the viewer and enter the address `localhost:5900` while the `chrome` docker container is running to see the testing visaully in browser. You'll need to ignore the warning about the connection being unencrypted. Then enter the password `secret`.
 
+## Production
 
-## Deployment
+Change the the password for `POSTGRES_PASSWORD` in `db` and `DATABASE_URL` in `web`.
 
-### Release to Heroku
+Heroku will expect an app called `mysite-staging` to be created, along with a free PostgreSQL instance. The Heroku instance needs the following variables set up:
 
-#### First Time
+* `ADMINS` - a comma-separated list of emails to receive error reports
+* `ALLOWED_HOSTS` - a comma-separated list of allowed hosts
+* `DATABASE_URL` - The database settings. This is set up by Heroku.
+* `DJANGO_SETTINGS_MODULE` - `mysite.settings.production`
+* `SECRET_KEY` -  a long (32 characters+) random string used for deriving secrets for the session cookies and other things
 
-Now you'll need to setup an AWS bucket for the `media` files becuase Heroku dynos are ephemeral so you can't use a `media` directory like you would in development.
+You can deploy anywhere you like, but this set up is specifically designed to also be compatible with Heroku or EC2.
 
-The instructions for this can be found in `web/djangosharedsettings/bucket.py`.
+Both assume that you will use an S3 bucket for static files.
 
-When following them, make sure you've got the aws command correctly aliased to the Docker image as described at the start of this README.
+For media in production you'll need to create an S3 bucket with suitable permissions as described in `web/djangosharedsettings/bucket.py` then set:
 
-Finally set up and SMTP server. If you want to use AWS SES, the instructions can be found in `web/djangosharedsettings/email.py`
+* `AWS_STORAGE_BUCKET_NAME` - The name of the S3 bucket
+* `AWS_ACCESS_KEY_ID` - The access key ID for the bucket above
+* `AWS_SECRET_ACCESS_KEY` - The secret key for the access key above
 
-Now set up heroku app, a PostgreSQL instance and the correct config settings (like those you would use in `docker-compose.yml`). This command can help you set all the config settings in one go:
+Usually you'll set up AWS SES as an SMTP email server.
 
-```
-EDITOR=vim heroku config:edit --app $DEPLOYMENT_TARGET
-```
+For email you can use the variables in `web/djangosharedsettings/email.py`. At the moment the system will use the first email specified in `ADMINS`:
 
-Make sure static files are up to date:
+* `EMAIL_PORT` - e.g. `465`
+* `EMAIL_USE_TLS` - e.g. `"false"`
+* `EMAIL_USE_SSL` - e.g. `"true"`
+* `SERVER_EMAIL` - e.g. `admin@mysite.example.com`
+* `DEFAULT_FROM_EMAIL` - e.g. `admin@mysite.example.com`
+* `EMAIL_HOST` - e.g. `smtp.example.com`
+* `EMAIL_HOST_PASSWORD`
+* `EMAIL_HOST_USER`
 
-```
-manage.py collectstatic --noinput --link
-```
+For instructions on how to set up SES and for test email sending see `EMAIL.md`.
 
-Optionally take a dump of your local database so that it will be included in your container allowing you to use it from a dyno to populate the empty database:
+Once this is done, check out HEROKU.md for Heroku instructions or EC2.md for EC2 instructions.
 
-```
-manage.py dumpdata --natural-foreign --natural-primary --indent 2 --format json > web/dump.json
-```
+## Backup and Restore
 
-
-#### Deploy
-
-Set the deployment target to the Heroku app name:
-
-```
-export DEPLOYMENT_TARGET=mysite-staging
-```
-
-Then commit any changes you want to deploy.
-
-Finally run these one at a time, otherwise they might not all get run:
+It is possible to backup and restore data at the Django level rather than the PostgreSQL level if you like. Here's an example:
 
 ```
-# See https://devcenter.heroku.com/articles/local-development-with-docker-compose
-heroku login
-heroku container:login
-git stash
-cd web
-heroku container:push -a $DEPLOYMENT_TARGET web
-heroku container:release -a $DEPLOYMENT_TARGET web
-heroku run --type=worker -a $DEPLOYMENT_TARGET /usr/bin/python3 manage.py migrate
-heroku run --type=worker -a $DEPLOYMENT_TARGET /usr/bin/python3 manage.py loaddata /code/dump.json
-git stash pop
+manage.py dumpdata --indent 2 --format json --natural-foreign --natural-primary > dump.json
 ```
 
-Other useful commands:
+Not reset the database, and run the migrations again to set up the tables:
 
 ```
-heroku logs --tail --app $DEPLOYMENT_TARGET
-heroku run --type=worker -a $DEPLOYMENT_TARGET /usr/bin/python3 manage.py createsuperuser
+manage.py migrate
+```
+
+Now restore the data from the dump:
+
+```
+cat dump.json | manage.py loaddata --format=json -
 ```

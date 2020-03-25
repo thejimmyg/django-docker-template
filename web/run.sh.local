@@ -23,7 +23,7 @@ if [ ! -d "/code/mysite" ]; then
 ROOT_DIR = os.path.dirname(BASE_DIR)
 EOF
   cat << EOF > "mysite/settings/dev.py"
-from .base_06_timezone import *
+from .base_last import *
 
 MEDIA_ROOT = os.path.join(ROOT_DIR, 'media')
 MEDIA_URL = '/media/'
@@ -31,14 +31,14 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 EOF
   cat << EOF > "mysite/settings/production.py"
-from .production_03_security import *
+from .production_last import *
 
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 ALLOWED_HOSTS = [host.strip() for host in os.environ['ALLOWED_HOSTS'].split(',')]
 PREPEND_WWW = True
 EOF
   cat << EOF >> "mysite/urls.py"
-
+# Set up dev static erver
 from django.conf import settings
 
 if settings.DEBUG:
@@ -49,56 +49,12 @@ if settings.DEBUG:
     urlpatterns += staticfiles_urlpatterns()
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 EOF
-  mkdir -p mysite/templates
-  cat << EOF > "mysite/templates/base.html"
-{% load static %}
-<!DOCTYPE html>
-<html class="no-js" lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <title>
-            {% block title %}
-                {% if self.title %}{{ self.title }}{% endif %}
-            {% endblock %}
-        </title>
-        <meta name="description" content="" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-        {# Global stylesheets #}
-        <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
-
-        {% block extra_css %}
-            {# Override this in templates to add extra stylesheets #}
-        {% endblock %}
-    </head>
-
-    <body class="{% block body_class %}{% endblock %}">
-      {% block messages %}
-        {% if messages %}
-          <div class="messages">
-            <h3>Messages</h3>
-            <ul class="messages">
-                {% for message in messages %}
-                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-                {% endfor %}
-            </ul>
-          </div>
-        {% endif %}
-      {% endblock %}
-      <div class="content">
-        <h3>Content</h3>
-        {% block content %}{% endblock %}
-
-        {# Global javascript #}
-        <script type="text/javascript" src="{% static 'js/scripts.js' %}"></script>
-
-        {% block extra_js %}
-            {# Override this in templates to add extra javascript #}
-        {% endblock %}
-      </div>
-    </body>
-</html>
-EOF
+  cat mysite/settings/urls_08_allauth.py >> "mysite/urls.py"
+  rm mysite/settings/urls_08_allauth.py
+  # We need the allauth URLs first, because they should be used in preference to the Wagtail equivalents
+  cat mysite/settings/urls_09_wagtail.py >> "mysite/urls.py"
+  rm mysite/settings/urls_09_wagtail.py
+  mv templates mysite/
   mkdir -p "mysite/static/css" "mysite/static/js"
   cat << EOF > "mysite/static/css/styles.css"
 .messages {
@@ -152,7 +108,7 @@ fi
 echo 'Fixing permissions on /code'
 chown -R `/usr/bin/whoami` /code
 echo 'done'
-pip freeze > /code/freeze.txt
+pip3 freeze > /code/freeze.txt
 python3 manage.py collectstatic --noinput
 RETRIES=99
 CONNECTION_DATABASE_URL=`echo $DATABASE_URL | sed 's|postgis://|postgres://|'`

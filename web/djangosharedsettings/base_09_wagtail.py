@@ -1,4 +1,4 @@
-'''
+"""
 ./manage.py startapp
 
 
@@ -33,7 +33,8 @@ urlpatterns = [
 You might also want to add this management command for wiping the tables after a migrate so that you can loaddata.
 
 
-```
+
+
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection
 
@@ -49,8 +50,7 @@ class Command(BaseCommand):
               DELETE FROM wagtailcore_page CASCADE;
             ''')
             self.stdout.write(self.style.SUCCESS('Successfully wiped the tables'))
-```
-'''
+"""
 
 from .base_08_allauth import *
 
@@ -92,6 +92,8 @@ for app in [
   'django.contrib.sessions',
   'django.contrib.messages',
   'django.contrib.staticfiles',
+
+  'wagtailthemes',
 ]:
     if app not in INSTALLED_APPS:
         INSTALLED_APPS.append(app)
@@ -99,7 +101,6 @@ for app in [
 # Probably worth setting this to the same as Django's APPEND_SLASH
 # https://docs.djangoproject.com/en/2.2/ref/settings/#append-slash
 WAGTAIL_APPEND_SLASH = APPEND_SLASH = True
-
 
 # To set up search follow: http://docs.wagtail.io/en/v2.5.1/advanced_topics/settings.html#search
 
@@ -147,7 +148,8 @@ for app in [
     'wagtailmenus',
     'wagtailautocomplete',
 ]:
-    INSTALLED_APPS.append(app)
+    if app not in INSTALLED_APPS:
+        INSTALLED_APPS.append(app)
 
 for cp in [
     'django.contrib.auth.context_processors.auth',
@@ -165,3 +167,43 @@ for cp in [
         TEMPLATES[0]['OPTIONS']['context_processors'].append(cp)
 
 #  manage.py migrate wagtailmenus
+
+
+
+
+
+# Wagtail themes:
+
+for app in [
+    'wagtail.contrib.settings',
+    'wagtailthemes',
+]:
+    if app not in INSTALLED_APPS:
+        INSTALLED_APPS.append(app)
+for middleware in [
+    'wagtailthemes.middleware.ThemeMiddleware',
+]:
+    if middleware not in MIDDLEWARE:
+        MIDDLEWARE.append(middleware)
+if 'loaders' not in TEMPLATES[0]['OPTIONS']:
+    TEMPLATES[0]['OPTIONS']['loaders'] = []
+
+for loader in [
+    'django.template.loaders.filesystem.Loader',
+    'django.template.loaders.app_directories.Loader',
+]:
+    if loader not in TEMPLATES[0]['OPTIONS']['loaders']:
+        TEMPLATES[0]['OPTIONS']['loaders'].append(loader)
+TEMPLATES[0]['OPTIONS']['loaders'].insert(0, 'wagtailthemes.loaders.ThemeLoader')
+
+
+# Have to make sure APP_DIRS isn't present.
+# Remove 'APP_DIRS': True at this position
+del TEMPLATES[0]['APP_DIRS']
+
+
+WAGTAIL_THEME_PATH = 'themes'
+WAGTAIL_THEMES = [
+    ('default', 'Default'),
+    ('none', 'None'),
+]

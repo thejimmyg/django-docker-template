@@ -1,11 +1,5 @@
 '''
-Install:
-
-```
-pip install django-allauth
-```
-
-or add `django-allauth` to `requirements.txt`.
+To install add `django-allauth` to `requirements.txt`.
 
 Then you need to change the import chain in `dev.py` and `production.py` so that they import the settings from this modules, and so that this module imports from whatever the ones were before.
 
@@ -155,6 +149,7 @@ ACCOUNT_ADAPTER = 'mysite.adapters.TokenAccountAdapter'
 ```
 
 '''
+from .base_07_geo import *
 
 
 if 'django.contrib.sites' not in INSTALLED_APPS:
