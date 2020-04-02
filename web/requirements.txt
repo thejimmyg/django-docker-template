@@ -1,0 +1,3 @@
+# For AWS use
+# boto3==1.12.28
+# django-storages==1.9.1

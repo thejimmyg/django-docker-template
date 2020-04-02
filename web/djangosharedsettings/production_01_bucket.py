@@ -7,13 +7,16 @@ import os
 Make sure you add 'storages' to INSTALLED_APPS after 'django.contrib.admin'
 '''
 
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-AWS_STORAGE_BUCKET_NAME = os.environ['MEDIA_AWS_STORAGE_BUCKET_NAME']
-AWS_ACCESS_KEY_ID = os.environ['MEDIA_AWS_ACCESS_KEY_ID']
-AWS_SECRET_ACCESS_KEY = os.environ['MEDIA_AWS_SECRET_ACCESS_KEY']
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
-AWS_DEFAULT_ACL = 'public-read'
-MEDIA_URL = "https://%s/" % AWS_S3_CUSTOM_DOMAIN
+AWS_STORAGE_BUCKET_NAME = os.environ.get('MEDIA_AWS_STORAGE_BUCKET_NAME')
+if AWS_STORAGE_BUCKET_NAME and AWS_STORAGE_BUCKET_NAME != 'XXX':
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    AWS_ACCESS_KEY_ID = os.environ['MEDIA_AWS_ACCESS_KEY_ID']
+    AWS_SECRET_ACCESS_KEY = os.environ['MEDIA_AWS_SECRET_ACCESS_KEY']
+    AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+    AWS_DEFAULT_ACL = 'public-read'
+    MEDIA_URL = "https://%s/" % AWS_S3_CUSTOM_DOMAIN
+    if 'storages' not in INSTALLED_APPS:
+        INSTALLED_APPS.insert(INSTALLED_APPS.index('django.contrib.admin'), 'storages')
 
 '''
 # Creating the bucket

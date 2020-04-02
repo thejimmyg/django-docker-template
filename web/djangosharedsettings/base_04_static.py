@@ -26,7 +26,8 @@ COMPRESS_CSS_HASHING_METHOD = 'content'
 
 # Make sure you add 'whitenoise.middleware.WhiteNoiseMiddleware' after 'django.middleware.security.SecurityMiddleware' in MIDDLEWARE
 MIDDLEWARE.insert(MIDDLEWARE.index('django.middleware.security.SecurityMiddleware')+1, 'whitenoise.middleware.WhiteNoiseMiddleware')
-INSTALLED_APPS.insert(INSTALLED_APPS.index('django.contrib.admin'), 'storages')
+# storages is new set up in production_01_bucket.py
+# Let me know if there are any problems
 STATIC_ROOT = os.path.join(ROOT_DIR, 'staticcache')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),

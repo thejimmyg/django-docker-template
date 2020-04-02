@@ -4,96 +4,176 @@
 
 1. Install the latest version of Docker
 
-2. Clone the repo to a directory called `mysite` (if you choose a different name, Docker Compose will name the containers in a different way to the names used in the documentation).
+   On most platforms this just means going to the Docker website and running
+   the installer for your platform. Docker compose should be included.
 
-3. Copy `docker-compose.yml.example` to `docker-compose.yml` and update it with the settings you want to use for development (email settings in particular are worth setting up so that you can easily confirm the email address of a superuser.
+   On a raspberry pi this can be done with:
+
+   ```
+   curl -fsSL https://get.docker.com -o get-docker.sh
+   sh get-docker.sh
+   sudo apt install -y python3 python3-pip python3-dev
+   sudo pip3 install docker-compose
+   ```
+
+2. Clone the repo to a directory called `mysite` (if you choose a different
+   name, Docker Compose will name the containers in a different way to the names
+   used in the documentation).
+
+3. Copy `docker-compose.yml.example` to `docker-compose.yml` and update it with
+   the settings you want to use for development (email settings in particular are
+   worth setting up so that you can easily confirm the email address of a
+   superuser.
 
    ```
    cp docker-compose.yml.example docker-compose.yml
    ```
 
-4. Run `docker-compose build git aws; docker-compose down && COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose up --build web db && docker-compose logs -f web db`
+4. Run `docker-compose down && COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1
+   docker-compose up --build web db && docker-compose logs -f web db`
 
-The `web` container is build using the experimental BuildKit front end to cache the pip downloads so that if you change your `base-requirements.txt` file you don't have to re-download all the requirements, only the ones that have changed. This needs a recent version of Docker Compose e.g. 1.25.4. If you don't have this, follow the comments in `web/Dockerfile` to take a different approach without the caching.
+   Optionally you can run `docker-compose build awscli gitcli` to build those
+   containers. You don't need to set the respective aliases below if you aren't
+   using the commands.
 
-Your will be hosted then at http://localhost:8000 (the port may be different if you configured a different `PORT` variable).
+   Note: On an older raspberry pi you might need to increase the timeouts by also
+   setting `COMPOSE_HTTP_TIMEOUT=220 DOCKER_CLIENT_TIMEOUT=220` before
+   `COMPOSE_DOCKER_CLI_BUILD=1`.
+
+   The `web` container is build using the experimental BuildKit front end to cache
+   the pip downloads so that if you change your `base-requirements.txt` file you
+   don't have to re-download all the requirements, only the ones that have
+   changed. This needs a recent version of Docker Compose e.g. 1.25.4. If you
+   don't have this, follow the comments in `web/Dockerfile` to take a different
+   approach without the caching.
+
+   Your will be hosted then at http://localhost:8000 (the port may be different if
+   you configured a different `PORT` variable).
 
 5. Set up aliases
 
-It can be a bit tedious typing the full `docker-compose` commands you need, so you can alias them to shorter versions. You'll need to do this each time you start working in a new terminal.
+   It can be a bit tedious typing the full `docker-compose` commands you need, so
+   you can alias them to shorter versions. You'll need to do this each time you
+   start working in a new terminal.
 
-```
-alias manage.py='docker-compose -f `pwd`/docker-compose.yml run --rm web python3 manage.py'
-alias autopep8='docker-compose -f `pwd`/docker-compose.yml run --rm web /usr/bin/autopep8'
-alias aws='docker-compose -f `pwd`/docker-compose.yml run --rm aws'
-alias psql='docker-compose -f `pwd`/docker-compose.yml run --rm db psql'
-alias ogrinfo='docker-compose -f `pwd`/docker-compose.yml run --rm web ogrinfo'
-alias ogrinspect='docker-compose -f `pwd`/docker-compose.yml run --rm web ogrinspect'
-alias git='docker-compose -f `pwd`/docker-compose.yml run --rm git'
-```
+   ```
+   alias mysite_manage.py="docker-compose -f `pwd`/docker-compose.yml run --rm web python3 manage.py"
+   alias mysite_autopep8="docker-compose -f `pwd`/docker-compose.yml run --rm web /usr/bin/autopep8"
+   alias mysite_psql="docker-compose -f `pwd`/docker-compose.yml run --rm db psql"
+   # For CLIs
+   # alias mysite_git="docker-compose -f `pwd`/docker-compose.yml run --rm gitcli"
+   # alias mysite_aws="docker-compose -f `pwd`/docker-compose.yml run --rm awscli"
+   # For geo:
+   # alias mysite_ogrinfo="docker-compose -f `pwd`/docker-compose.yml run --rm web ogrinfo"
+   # alias mysite_ogrinspect="docker-compose -f `pwd`/docker-compose.yml run --rm web ogrinspect"
+   ```
+
+   The commands above all start new containers. If you happen to have the
+   container running already it can be more efficient to exec the command in the
+   currently running container. Set up these aliases too:
+
+   Note: If the directory containing this one is not named `mysite` then you'll
+   need to adjust the prefix of each of the container names.
+
+   ```
+   alias mysite_running_manage.py="docker exec mysite_web_1 python3 manage.py"
+   alias mysite_running_autopep8="docker exec mysite_web_1 /usr/bin/autopep8"
+   alias mysite_running_psql="docker exec mysite_db_1 psql"
+   # For geo:
+   # alias mysite_running_ogrinfo="docker exec mysite_web_1 ogrinfo"
+   # alias mysite_running_ogrinspect="docker exec mysite_web_1 ogrinspect"
+   ```
 
 6. Set up the database:
 
-```
-# Checks there are no migrations to be created (there shouldn't be if you've made no changes yet)
-manage.py makemigrations
-# Set up the database
-manage.py migrate
-# Change the default site to serve from port 8000 (which is the port the `web` container uses internally.
-manage.py loaddata mysite/settings/base_09_wagtail_site.json
-# Set up the default theme for Wagtail
-manage.py loaddata mysite/settings/base_09_wagtail_theme.json
-```
+   You can use your new `manage.py` alias or `running_manage.py`:
+
+   ```
+   # Checks there are no migrations to be created (there shouldn't be if you've made no changes yet)
+   mysite_running_manage.py makemigrations
+   # Set up the database
+   myiste_running_manage.py migrate
+   # Change the default site to serve from port 8000 (which is the port the `web` container uses internally.
+   mysite_running_manage.py loaddata mysite/settings/base_09_wagtail_site.json
+   # Set up the default theme for Wagtail
+   mysite_running_manage.py loaddata mysite/settings/base_09_wagtail_theme.json
+   ```
 
 7. Create a superuser
 
-This is a bit tricky because you want your superuser to be able to sign in with AllAuth so that you can disable all the other login screens like the Django admin or Wagtail CMS ones. This disabling is currently done with the redirects to /accounts/login that are set up in `mysite/urls.py`.
+   This is a bit tricky because you want your superuser to be able to sign in with
+   AllAuth so that you can disable all the other login screens like the Django
+   admin or Wagtail CMS ones. This disabling is currently done with the redirects
+   to /accounts/login that are set up in `mysite/urls.py`.
 
-You can work around this by enabling the admin, registering a user via the web interface, verifying the email, creating a superuser on the command line, using this second user to login to the admin to give the first user staff and superuser permissions, then loging back in as the first user to delete the second one.
+   You can work around this by enabling the admin, registering a user via the web
+   interface, verifying the email, creating a superuser on the command line, using
+   this second user to login to the admin to give the first user staff and
+   superuser permissions, then loging back in as the first user to delete the
+   second one.
 
-It is much easier to load a fixture, login and then change the email and password. You can do this like this:
+   It is much easier to load a fixture, login and then change the email and
+   password. You can do this like this:
 
-```
-manage.py loaddata myactualsite/settings/base_08_user.json
-```
+   ```
+   mysite_running_manage.py loaddata myactualsite/settings/base_08_user.json
+   ```
 
-This creates a user with `me@example.com` as the email and the password `123123ab`. You can use it to log in to the admin at `/admin` and change the email in AUTHENTICATION AND AUTHORIZATION -> Users.
+   This creates a user with `me@example.com` as the email and the password
+   `123123ab`. You can use it to log in to the admin at `/admin` and change the
+   email in AUTHENTICATION AND AUTHORIZATION -> Users.
 
 ### Notes
 
-Note the Wagtail page you see as the homepage comes directly from `Page` class which you won't use in future. You'll use a `HomePage` model instead that will use the same base template as other pages. Because you loaded the `base_09_wagtail_theme.json` fixture, the site is set up to use the `Default` theme in `mysite/templates/theme/` which overrides `wagtailcore/page.html` to use `base.html`. `base.html` overriden itself in this theme to provide Home and Login links.
+Note the Wagtail page you see as the homepage comes directly from `Page` class
+which you won't use in future. You'll use a `HomePage` model instead that will
+use the same base template as other pages. Because you loaded the
+`base_09_wagtail_theme.json` fixture, the site is set up to use the `Default`
+theme in `mysite/templates/theme/` which overrides `wagtailcore/page.html` to
+use `base.html`. `base.html` overriden itself in this theme to provide Home and
+Login links.
 
 When you login to /cms you can change the theme in Settings->Theme.
 
-You can connect to the PostgreSQL database using the `psql` command you aliased above which really runs in your `db` container:
+You can connect to the PostgreSQL database using the `psql` command you aliased
+above which really runs in your `db` container:
 
 ```
-psql -h db -U postgres postgres
+mysite_running_psql -h db -U postgres postgres
 ```
 
-In development remember to clear your browser cache once you've changed static files and run `manage.py collectstatic` by restarting the Docker container. Otherwise the browser will use the cached old version.
+In development remember to clear your browser cache once you've changed static
+files and run `mysite_running_manage.py collectstatic` by restarting the Docker
+container. Otherwise the browser will use the cached old version.
+
 
 ### Starting an app
 
-You should do all your development in separate Django apps rather than in the generated project. This is Django best practice.
+You should do all your development in separate Django apps rather than in the
+generated project. This is Django best practice.
 
 With your aliases set up, create an app with:
 
 ```
-manage.py startapp myapp
+mysite_running_manage.py startapp myapp
 ```
 
 ### Customise User Model
 
-If you want to extend the `User` model, the best way is by creating a new model named something like `Profile` with a `ForeignKey` to `User` rather than deriving a new model from `AbstractUser`. Then you can just access the fields using `request.user.profile` and it doesn't interfere with the way anything else uses the `User` model.
+If you want to extend the `User` model, the best way is by creating a new model
+named something like `Profile` with a `ForeignKey` to `User` rather than
+deriving a new model from `AbstractUser`. Then you can just access the fields
+using `request.user.profile` and it doesn't interfere with the way anything
+else uses the `User` model.
 
 ### Syntax Formatting
 
-Make sure the alias is set up as described above, then run `autopep8` from within the container like this:
+Make sure the alias is set up as described above, then run `autopep8` from
+within the container like this:
 
 ```
-autopep8 --diff --exclude /code/mysite/settings/base.py -r /code/
-autopep8 --in-place --exclude /code/mysite/settings/base.py -r /code/
+runnning_autopep8 --diff --exclude /code/mysite/settings/base.py -r /code/
+runnning_autopep8 --in-place --exclude /code/mysite/settings/base.py -r /code/
 ```
 
 ### Running Tests
@@ -102,20 +182,33 @@ Once you've written tests, you can run them like this:
 
 ```
 docker-compose up -d chrome
-manage.py test --failfast -k mysite/test
+mysite_running_manage.py test --failfast -k mysite/test
 ```
 
 You can use VNC Viewer to view Chrome while the tests are running.
 
 https://www.realvnc.com/en/connect/download/viewer/
 
-Load the viewer and enter the address `localhost:5900` while the `chrome` docker container is running to see the testing visaully in browser. You'll need to ignore the warning about the connection being unencrypted. Then enter the password `secret`.
+Load the viewer and enter the address `localhost:5900` while the `chrome`
+docker container is running to see the testing visaully in browser. You'll need
+to ignore the warning about the connection being unencrypted. Then enter the
+password `secret`.
 
-## Production
+### Production
 
-Change the the password for `POSTGRES_PASSWORD` in `db` and `DATABASE_URL` in `web`.
+In production you should set this in your `docker-compose.yml`:
 
-Heroku will expect an app called `mysite-staging` to be created, along with a free PostgreSQL instance. The Heroku instance needs the following variables set up:
+
+You can now deploy to:
+
+* A bare metal server (e.g. a Raspberry Pi, Rack Mount Server or a spare laptop)
+* AWS
+* Heroku (using some AWS services like S3 and SES)
+
+Heroku will expect an app called `mysite-staging` to be created, along with a
+free PostgreSQL instance.
+
+For production the following variables must set up:
 
 * `ADMINS` - a comma-separated list of emails to receive error reports
 * `ALLOWED_HOSTS` - a comma-separated list of allowed hosts
@@ -123,11 +216,23 @@ Heroku will expect an app called `mysite-staging` to be created, along with a fr
 * `DJANGO_SETTINGS_MODULE` - `mysite.settings.production`
 * `SECRET_KEY` -  a long (32 characters+) random string used for deriving secrets for the session cookies and other things
 
-You can deploy anywhere you like, but this set up is specifically designed to also be compatible with Heroku or EC2.
+It is important you set:
 
-Both assume that you will use an S3 bucket for static files.
+```
+DJANGO_SETTINGS_MODULE: mysite.settings.production
+```
 
-For media in production you'll need to create an S3 bucket with suitable permissions as described in `web/djangosharedsettings/bucket.py` then set:
+This sets up some extra features and security and disables the reloading dev server.
+
+Also, change the the password for `POSTGRES_PASSWORD` in `db` and `DATABASE_URL` in `web`.
+
+Heroku and AWS deployments both assume that you will use an S3 bucket for static files.
+
+You'll need to uncomment the AWS lines in `web/requirements.txt` and re-build
+the Docker container.
+
+For media in production you'll need to create an S3 bucket with suitable
+permissions as described in `web/djangosharedsettings/production_01_bucket.py` then set:
 
 * `AWS_STORAGE_BUCKET_NAME` - The name of the S3 bucket
 * `AWS_ACCESS_KEY_ID` - The access key ID for the bucket above
@@ -135,7 +240,7 @@ For media in production you'll need to create an S3 bucket with suitable permiss
 
 Usually you'll set up AWS SES as an SMTP email server.
 
-For email you can use the variables in `web/djangosharedsettings/email.py`. At the moment the system will use the first email specified in `ADMINS`:
+For email you can use the variables in `web/djangosharedsettings/base_02_email.py`. At the moment the system will use the first email specified in `ADMINS`:
 
 * `EMAIL_PORT` - e.g. `465`
 * `EMAIL_USE_TLS` - e.g. `"false"`

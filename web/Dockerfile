@@ -7,15 +7,15 @@ FROM alpine:3.11 as runbase
 RUN apk update
 RUN apk add --no-cache python3 postgresql-client libpq jpeg zlib libffi
 # Start geo
-RUN apk add --no-cache gdal geos proj proj-datumgrid geoip
-RUN ln -s /usr/lib/libproj.so.15.1.0 /usr/lib/libproj.so
+# RUN apk add --no-cache gdal geos proj proj-datumgrid geoip
+# RUN ln -s /usr/lib/libproj.so.15.1.0 /usr/lib/libproj.so
 # End geo
 
 FROM runbase as buildbase
 RUN apk update
 RUN apk add --no-cache build-base postgresql-dev libffi-dev zlib-dev jpeg-dev python3-dev
 # Start geo
-RUN apk add --no-cache gdal-dev geos-dev proj-dev geoip-dev
+# RUN apk add --no-cache gdal-dev geos-dev proj-dev geoip-dev
 # End geo
 
 # If you are using an old version of Docker don't use this section:

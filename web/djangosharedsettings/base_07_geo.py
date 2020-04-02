@@ -1,10 +1,13 @@
 '''
-If you had an existing database you'd need to re-run mugrations
+Geo support isn't enabled by default.
 
-```
-alias manage.py='docker-compose -f `pwd`/docker-compose.yml run --rm web python3 manage.py'
-manage.py migrate
-```
+To enable it:
+
+* Uncomment the geo lines in the `web/Dockerfile` and re-build
+* Change the `db` to use PostGIS
+* Update the `DATABASE_URL` setting to start `postgis:` instead of `postgres:`
+
+Note: PostGIS isn't supported easily on armv7 and the required packages aren't in Alpine 3.11 for arm which is why this isn't enabled by default.
 
 You should be able to run every step in the GeoDjango tutorial here:
 
@@ -14,9 +17,10 @@ You should be able to run every step in the GeoDjango tutorial here:
 from .base_06_timezone import *
 
 
-for app in [
-    'django.contrib.admin',
-    'django.contrib.gis',
-]:
-    if app not in INSTALLED_APPS:
-        INSTALLED_APPS.append(app)
+if os.environ['DATABASE_URL'].startswith('postgis'):
+    for app in [
+        'django.contrib.admin',
+        'django.contrib.gis',
+    ]:
+        if app not in INSTALLED_APPS:
+            INSTALLED_APPS.append(app)
