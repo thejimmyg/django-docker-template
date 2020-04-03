@@ -35,6 +35,8 @@
       <div class="content">
         <p>
           <a href="/">Home</a>
+          <a href="/admin">Django Admin</a>
+          <a href="/cms">Wagtail</a>
           {% if request.user.username %}
             <a href="{% url 'account_logout' %}">Logout</a>
           {% else %}

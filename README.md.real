@@ -21,20 +21,17 @@
    used in the documentation).
 
 3. Copy `docker-compose.yml.example` to `docker-compose.yml` and update it with
-   the settings you want to use for development (email settings in particular are
-   worth setting up so that you can easily confirm the email address of a
-   superuser.
+   the settings you want to use for development
 
    ```
    cp docker-compose.yml.example docker-compose.yml
    ```
 
-4. Run `docker-compose down && COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1
-   docker-compose up --build web db && docker-compose logs -f web db`
+4. Start the `web` and `db` containers:
 
-   Optionally you can run `docker-compose build awscli gitcli` to build those
-   containers. You don't need to set the respective aliases below if you aren't
-   using the commands.
+   ```
+   docker-compose down && COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose up --build web db && docker-compose logs -f web db
+   ```
 
    Note: On an older raspberry pi you might need to increase the timeouts by also
    setting `COMPOSE_HTTP_TIMEOUT=220 DOCKER_CLIENT_TIMEOUT=220` before
@@ -49,6 +46,11 @@
 
    Your will be hosted then at http://localhost:8000 (the port may be different if
    you configured a different `PORT` variable).
+
+   Optionally you can run `docker-compose build awscli gitcli` to build those
+   containers. This could be useful if you don't have `git` installed and wish to
+   use it, or if you intend to use the `aws` command and don't have that
+   installed.
 
 5. Set up aliases
 
@@ -76,9 +78,10 @@
    need to adjust the prefix of each of the container names.
 
    ```
-   alias mysite_running_manage.py="docker exec mysite_web_1 python3 manage.py"
-   alias mysite_running_autopep8="docker exec mysite_web_1 /usr/bin/autopep8"
-   alias mysite_running_psql="docker exec mysite_db_1 psql"
+   alias mysite_running_manage.py="docker exec -it mysite_web_1 python3 manage.py"
+   alias mysite_running_web_sh="docker exec -it mysite_web_1 /bin/sh"
+   alias mysite_running_autopep8="docker exec -it mysite_web_1 /usr/bin/autopep8"
+   alias mysite_running_psql="docker exec -it mysite_db_1 psql"
    # For geo:
    # alias mysite_running_ogrinfo="docker exec mysite_web_1 ogrinfo"
    # alias mysite_running_ogrinspect="docker exec mysite_web_1 ogrinspect"
@@ -92,7 +95,7 @@
    # Checks there are no migrations to be created (there shouldn't be if you've made no changes yet)
    mysite_running_manage.py makemigrations
    # Set up the database
-   myiste_running_manage.py migrate
+   mysite_running_manage.py migrate
    # Change the default site to serve from port 8000 (which is the port the `web` container uses internally.
    mysite_running_manage.py loaddata mysite/settings/base_09_wagtail_site.json
    # Set up the default theme for Wagtail
@@ -116,7 +119,7 @@
    password. You can do this like this:
 
    ```
-   mysite_running_manage.py loaddata myactualsite/settings/base_08_user.json
+   mysite_running_manage.py loaddata mysite/settings/base_08_user.json
    ```
 
    This creates a user with `me@example.com` as the email and the password
@@ -196,8 +199,6 @@ password `secret`.
 
 ### Production
 
-In production you should set this in your `docker-compose.yml`:
-
 
 You can now deploy to:
 
@@ -224,21 +225,43 @@ DJANGO_SETTINGS_MODULE: mysite.settings.production
 
 This sets up some extra features and security and disables the reloading dev server.
 
+It will also expect the site to be served behind an SSL proxy such as Nginx (or
+the one Heroku provides). If you try to access it directly, it will issue an
+redirect to HTTPS which will probably fail silently in browsers and command
+line tools.
+
 Also, change the the password for `POSTGRES_PASSWORD` in `db` and `DATABASE_URL` in `web`.
+
+Finally, change the command from `run.sh.dev` to `run.sh` to change the server to gunicorn for production:
+
+```
+command: /bin/sh /code/run.sh
+```
+
+This is also the default command that gets run when the Docker container is started directly if you are not using `docker-compose` e.g. on Heroku.
+
+Note that when use `run.sh` instead of `run.sh.dev`, the Gunicorn server with
+Gevent is used to serve Django instead of the Django development server. This
+means the server will no longer re-start when you make changes. You'll have to
+restart the container if running via docker-compose or rebuild and restart if
+using Docker without the volume mounts.
+
+Also, in production mode the assets that are linked to are the ones that
+contain a checksum in the file name making them suitable to be served with a
+far future expiry date.
 
 Heroku and AWS deployments both assume that you will use an S3 bucket for static files.
 
-You'll need to uncomment the AWS lines in `web/requirements.txt` and re-build
-the Docker container.
-
-For media in production you'll need to create an S3 bucket with suitable
+For media in production on Heroku you'll need to create an S3 bucket with suitable
 permissions as described in `web/djangosharedsettings/production_01_bucket.py` then set:
 
 * `AWS_STORAGE_BUCKET_NAME` - The name of the S3 bucket
 * `AWS_ACCESS_KEY_ID` - The access key ID for the bucket above
 * `AWS_SECRET_ACCESS_KEY` - The secret key for the access key above
 
-Usually you'll set up AWS SES as an SMTP email server.
+Usually you'll set up AWS SES as an SMTP email server. You'll also need to
+uncomment the AWS requirements in `web/requirements.txt` and re-build the
+container.
 
 For email you can use the variables in `web/djangosharedsettings/base_02_email.py`. At the moment the system will use the first email specified in `ADMINS`:
 
@@ -254,6 +277,67 @@ For email you can use the variables in `web/djangosharedsettings/base_02_email.p
 For instructions on how to set up SES and for test email sending see `EMAIL.md`.
 
 Once this is done, check out HEROKU.md for Heroku instructions or EC2.md for EC2 instructions.
+
+## Nginx in Production
+
+
+* Uncomment nginx lines in `docker-compose.yml`
+* Make sure you update `LETS_ENCRYPT_EMAIL` to the real email address of a person who has agreed to the terms and conditions of Let's Encryp
+
+  ```
+  nginx:
+    ...
+    environment:
+      LETS_ENCRYPT_EMAIL: "james@example.com"
+  ```
+
+* Put Django into production by changing the settings module and using `run.sh`
+
+  ```
+  ...
+  web:
+    ...
+    environment:
+      DJANGO_SETTINGS_MODULE: test2.settings.production
+      ...
+    command: /bin/sh /code/run.sh
+  ```
+
+* Make sure your live DNS on the internet points to the server you want a certificate for and that the domain is in `ALLOWED_HOSTS` in the `web` section of your `docker-compose.yml`:
+
+  ```
+  ...
+  web:
+    ...
+    environment:
+      ALLOWED_HOSTS: www.example.com,example.com
+  ```
+
+
+* Apply your Docker Compose changes with:
+
+  ```
+  docker-compose down && COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose up --build nginx web db && docker-compose logs -f nginx web db
+  ```
+
+* Set up your Nginx shell alias and start the shell:
+
+  ```
+  alias test2_running_nginx_sh="docker exec -it test2_nginx_1 sh"
+  test2_running_nginx_sh
+  ```
+
+* Set up the new domain, get the certificate and install it using the `new-domain` command. This takes the domain (without `www.`) then the internal Docker name of the machine you want to proxy to, then the port to on that machine. In this case you want to proxy to your Django app running in `web` on port 8000. NOTE: You must not specify `www.` in the command as this will be added automatically. Type `exit` to exit the shell when you are done.
+
+  ```
+  new-domain example.com web 8000
+  ```
+
+
+NOTE: For testing you can edit /bin/new-domain and follow the instructions in
+the comment to add the `--server` flag to the `lego` commands to use the
+staging server.
+
 
 ## Backup and Restore
 
@@ -273,4 +357,21 @@ Now restore the data from the dump:
 
 ```
 cat dump.json | manage.py loaddata --format=json -
+```
+
+## Stats
+
+In production mode this is representative of the resource usage:
+
+```
+$ docker stats
+CONTAINER ID        NAME                CPU %               MEM USAGE / LIMIT     MEM %               NET I/O             BLOCK I/O           PIDS
+11dd70e4d2d8        mysite_db_1          0.03%               4.277MiB / 1.943GiB   0.21%               24.8kB / 18.3kB     0B / 0B             7
+669c9cd2b4c5        mysite_nginx_1       0.01%               5.73MiB / 1.943GiB    0.29%               64kB / 75.5kB       0B / 0B             8
+c8e0ba252d01        mysite_web_1         0.03%               70.97MiB / 1.943GiB   3.57%               28.8kB / 32.5kB     0B / 0B             2
+
+$ docker images | egrep '(mysite|postgres)'
+mysite_nginx                                    latest              7c6eece7401b        6 minutes ago       53.9MB
+mysite_web                                      latest              28fd39f3e355        30 minutes ago      260MB
+mysite_db                                       12-alpine           ecb176ff304a        10 days ago         151MB
 ```

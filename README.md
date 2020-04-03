@@ -2,7 +2,7 @@
 
 To use this template:
 
-1. Clone and download to your project name (the instructions assume the folder name you clone to is the same as the name of your Django project):
+1. Clone or download to your project name (the instructions assume the folder name you clone to is the same as the name of your Django project):
 
 ```
 git clone https://github.com/thejimmyg/django-docker-template.git myactualsite
@@ -20,8 +20,12 @@ find . -type f -name "*" | grep -v ".git" | grep -v '.DS_Store' | xargs sed -i '
 
 ```
 mv -f README.md.real README.md
-git init
-git add .
 ```
 
 4. Follow the instructions in the new `README.md`
+
+
+## Potential Improvements
+
+* The current set up causes an infinite redirect if you register as a normal user and then try to access Wagtail or the Django admin. It should probably give an error message instead.
+* Nginx could perform the redirect to www. rather than Django?

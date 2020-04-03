@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# Exit if there are any errors
+set -e
 
 if [ ! -d "/code/mysite" ]; then
   echo "Creating the Django project ..."
@@ -105,18 +107,9 @@ class ExampleTests(TestCase):
 EOF
   echo "done."
 fi
-echo 'Fixing permissions on /code'
-chown -R `/usr/bin/whoami` /code
-echo 'done'
-pip3 freeze > /code/freeze.txt
+
 python3 manage.py collectstatic --noinput
-RETRIES=99
-CONNECTION_DATABASE_URL=`echo $DATABASE_URL | sed 's|postgis://|postgres://|'`
-until psql "$CONNECTION_DATABASE_URL" -c "select 1" > /dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
-  echo "Waiting for postgres server, $((RETRIES--)) remaining attempts..."
-  sleep 2
-done
-# python3 manage.py makemigrations
-# python3 manage.py migrate
+. run.common
+
 echo "Binding to $PORT"
 python3 manage.py runserver "0.0.0.0:$PORT"

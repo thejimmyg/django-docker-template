@@ -17,6 +17,23 @@ services:
   #   volumes:
   #     - ./git/ssh:/ssh
   #     - ./:/repo/
+  # nginx:
+  #   build: ./nginx
+  #   volumes:
+  #     - ./nginx/conf.d/docker.conf:/etc/nginx/conf.d/docker.conf:ro
+  #     - ./nginx/conf.d/docker:/etc/nginx/conf.d/docker:rw
+  #     - ./nginx/daily:/etc/periodic/daily:rw
+  #     - ./nginx/letsencrypt:/letsencrypt:rw
+  #     - ./nginx/webroot/:/webroot/:rw
+  #     # Add any other host-specific mounts here
+  #     - ./web/media/:/media/web/:ro
+  #     - ./web/staticcache/:/static/web/:ro
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   environment:
+  #     # The docker container will accept the Let's Encrypt terms for you using this email address. Only put the email of someone who is willing to accept the terms.
+  #     LETS_ENCRYPT_EMAIL: "james@example.com"
   chrome:
     image: selenium/standalone-chrome-debug:3.141.59-radium
     volumes:
@@ -53,11 +70,13 @@ services:
       EMAIL_PORT: 465
       EMAIL_USE_TLS: "false"
       EMAIL_USE_SSL: "true"
-      ALLOWED_HOSTS: www.example.com,example.com,localhost
+      # ALLOWED_HOSTS: www.web.localhost,web.localhost
+      ALLOWED_HOSTS: localhost
       ADMINS: james@example.com
       DEFAULT_FROM_EMAIL: james@example.com
       EMAIL_HOST: smtp.example.com
       EMAIL_HOST_PASSWORD: XXX
       EMAIL_HOST_USER: XXX
       SERVER_EMAIL: james@example.com
-    command: /bin/sh /code/run.sh.local
+    # command: /bin/sh /code/run.sh
+    command: /bin/sh /code/run.sh.dev
