@@ -1,43 +1,5 @@
 '''
-To install add `django-allauth` to `requirements.txt`.
-
-Then you need to change the import chain in `dev.py` and `production.py` so that they import the settings from this modules, and so that this module imports from whatever the ones were before.
-
 For adding a social account for Google visit  https://developers.google.com/identity/sign-in/web/sign-in?refresh=1 The callback you need for testing is: http://127.0.0.1:8000/accounts/google/login/callback/
-
-urls.py - the configuration below overrides some of the other login screens:
-
-```
-from django.contrib import admin
-from django.urls import include, path
-from django.urls import path, re_path, include
-
-from wagtail.admin import urls as wagtailadmin_urls
-from wagtail.documents import urls as wagtaildocs_urls
-from wagtail.core import urls as wagtail_urls
-
-from django.views.generic.base import RedirectView
-
-
-app_name = 'mysite'
-urlpatterns = [
-    # Instead, follow this pattern
-    path('meeting/', include('meeting.urls')),
-    path('data/', include('data.urls')),
-    path('experiment/', include('experiment.urls')),
-    # This is how wagtail recommends it is done, don't copy this
-    re_path(r'^documents/', include(wagtaildocs_urls)),
-    path('cms/login/', RedirectView.as_view(url='/accounts/login', query_string=True, permanent=False), name='index'),
-    path('_util/login/', RedirectView.as_view(url='/accounts/login', query_string=True, permanent=False), name='index'),
-    re_path(r'^cms/', include(wagtailadmin_urls)),
-    path('admin/login/', RedirectView.as_view(url='/accounts/login', query_string=True, permanent=False), name='index'),
-    path('admin/', admin.site.urls),
-    path('accounts/', include('allauth.urls')),
-    # Put this after accounts above to use the AllAuth URLs by default
-    re_path(r'^', include(wagtail_urls)),
-]
-# ... etc
-```
 
 You can copy templates to customise like this:
 
@@ -97,7 +59,6 @@ signup: allauth.socialaccount.forms.SignupForm
 ```
 
 One useful thing is to add a token (as long as it isn't for anything too critical as it could be changed maliciouly) to the email verification link so a user can carry on from where they left off. You can do so by customizing an `AccountAdapter`, creating a new URL route and then have it redirect to the usual verifiaction email link after setting a session cookie.
-
 
 urls.py:
 

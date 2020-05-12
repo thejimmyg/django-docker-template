@@ -1,0 +1,228 @@
+#!/bin/sh
+
+set -e
+
+DOCKER_NAME=$1
+MODE=$2
+DOMAIN=$3
+TEMPLATE=$4
+DOCKER_PORT=$5
+
+if [ "$DOCKER_PORT" = "" ]; then
+    DOCKER_PORT="80"
+fi
+
+if [ "$MODE" = "bare" ]; then
+    cat <<EOF > "/tmp/$DOCKER_NAME.ssl.cfg"
+[ req ]
+req_extensions     = req_ext
+distinguished_name = req_distinguished_name
+prompt             = no
+
+[req_distinguished_name]
+commonName=$DOMAIN
+
+[req_ext]
+subjectAltName   = @alt_names
+
+[alt_names]
+DNS.1  = $DOMAIN
+EOF
+    su-exec "$LETS_ENCRYPT_USER" openssl req -x509 -config "/tmp/$DOCKER_NAME.ssl.cfg"  -extensions req_ext -nodes -days 90 -newkey rsa:2048 -sha256 -keyout "/letsencrypt/certificates/$DOMAIN.key" -out "/letsencrypt/certificates/$DOMAIN.crt"
+    rm "/tmp/$DOCKER_NAME.ssl.cfg"
+else
+    cat <<EOF > "/tmp/$DOCKER_NAME.ssl.cfg"
+[ req ]
+req_extensions     = req_ext
+distinguished_name = req_distinguished_name
+prompt             = no
+
+[req_distinguished_name]
+commonName=$DOMAIN
+
+[req_ext]
+subjectAltName   = @alt_names
+
+[alt_names]
+DNS.1  = $DOMAIN
+DNS.2  = www.$DOMAIN
+EOF
+    su-exec "$LETS_ENCRYPT_USER" openssl req -x509 -config "/tmp/$DOCKER_NAME.ssl.cfg"  -extensions req_ext -nodes -days 90 -newkey rsa:2048 -sha256 -keyout "/letsencrypt/certificates/www.$DOMAIN.key" -out "/letsencrypt/certificates/www.$DOMAIN.crt"
+    rm "/tmp/$DOCKER_NAME.ssl.cfg"
+fi
+echo 'Done'
+
+BARE_DOMAIN="$DOMAIN"
+if [ "$MODE" = "bare" ]; then
+    FULL_DOMAIN="$BARE_DOMAIN"
+else
+    FULL_DOMAIN="www.$BARE_DOMAIN"
+fi
+
+# For debugging problems you could uncomment the echo commands below.
+mkdir -p "/webroot/$FULL_DOMAIN/.well-known/acme-challenge"
+# echo "$FULL_DOMAIN -> $DOCKER_NAME webroot" > "/webroot/$FULL_DOMAIN/.well-known/acme-challenge/hello"
+mkdir -p "/media/$FULL_DOMAIN/"
+# echo "$FULL_DOMAIN -> $DOCKER_NAME media" > "/media/$FULL_DOMAIN/hello"
+mkdir -p "/static/$FULL_DOMAIN/"
+# echo "$FULL_DOMAIN -> $DOCKER_NAME static" > "/static/$FULL_DOMAIN/hello"
+
+
+cat << EOF > "/etc/nginx/conf.d/docker/$DOCKER_NAME.conf"
+server {
+  listen 80;
+EOF
+if [ "$MODE" = "www" ]; then
+    cat << EOF >> "/etc/nginx/conf.d/docker/$DOCKER_NAME.conf"
+  server_name $FULL_DOMAIN $BARE_DOMAIN;
+EOF
+else
+    cat << EOF >> "/etc/nginx/conf.d/docker/$DOCKER_NAME.conf"
+  server_name $BARE_DOMAIN;
+EOF
+fi
+cat << EOF >> "/etc/nginx/conf.d/docker/$DOCKER_NAME.conf"
+
+  # These are redirected to stdout by the Dockerfile
+  access_log /var/log/nginx/access.log;
+  error_log /var/log/nginx/error.log;
+
+  location /.well-known/acme-challenge/ {
+    root /webroot/$FULL_DOMAIN/;
+  }
+
+  location / {
+    return 301 https://$FULL_DOMAIN\$request_uri;
+  }
+}
+EOF
+
+cat << EOF >> "/etc/nginx/conf.d/docker/$DOCKER_NAME.conf"
+server {
+  listen 443 ssl http2;
+  server_name $FULL_DOMAIN;
+
+  ssl_certificate /letsencrypt/certificates/$FULL_DOMAIN.crt;
+  ssl_certificate_key /letsencrypt/certificates/$FULL_DOMAIN.key;
+
+  # These are redirected to stdout by the Dockerfile
+  access_log /var/log/nginx/access.log;
+  error_log /var/log/nginx/error.log;
+
+EOF
+
+# Within the HTTPS server block
+if [ "$TEMPLATE" = "static" ]; then
+cat << EOF >> "/etc/nginx/conf.d/docker/$DOCKER_NAME.conf"
+  location / {
+    root /webroot/$FULL_DOMAIN/;
+  }
+EOF
+fi
+
+if [ "$TEMPLATE" = "static-fallback" ]; then
+cat << EOF >> "/etc/nginx/conf.d/docker/$DOCKER_NAME.conf"
+  location @fallback {
+    root /webroot/$FULL_DOMAIN/fallback;
+  }
+
+  location / {
+    root /webroot/$FULL_DOMAIN/latest;
+    try_files \$uri @fallback;
+  }
+EOF
+fi
+
+if [ "$TEMPLATE" = "post" ]; then
+cat << EOF >> "/etc/nginx/conf.d/docker/$DOCKER_NAME.conf"
+
+  root /webroot/$FULL_DOMAIN/;
+
+  location / {
+    auth_basic "Registry realm";
+    auth_basic_user_file /etc/nginx/conf.d/docker/$DOCKER_NAME.htpasswd;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    # Fix the "It appears that your reverse proxy set up is broken" error.
+    proxy_read_timeout 90;
+    proxy_redirect http://$DOCKER_NAME https://$FULL_DOMAIN;
+    if (\$request_method = POST ) {
+      proxy_pass http://$DOCKER_NAME;
+    }
+  }
+EOF
+fi
+
+if [ "$TEMPLATE" = "django" ]; then
+cat << EOF >> "/etc/nginx/conf.d/docker/$DOCKER_NAME.conf"
+
+  root /webroot/$FULL_DOMAIN/;
+
+  location / {
+    # auth_basic "Registry realm";
+    # auth_basic_user_file /etc/nginx/conf.d/docker/$DOCKER_NAME.htpasswd;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    # Fix the "It appears that your reverse proxy set up is broken" error.
+    proxy_read_timeout 90;
+    proxy_redirect http://$DOCKER_NAME https://$FULL_DOMAIN;
+    proxy_pass http://$DOCKER_NAME;
+  }
+
+  location /media/ {
+    alias /media/$FULL_DOMAIN/;
+  }
+
+  location /static/ {
+    alias /static/$FULL_DOMAIN/;
+  }
+EOF
+fi
+
+# End the server block
+cat << EOF >> "/etc/nginx/conf.d/docker/$DOCKER_NAME.conf"
+}
+EOF
+
+
+if [ "$MODE" != "bare" ]; then
+cat << EOF >> "/etc/nginx/conf.d/docker/$DOCKER_NAME.conf"
+server {
+  listen 443 ssl http2;
+  server_name $BARE_DOMAIN;
+  return 301 https://$FULL_DOMAIN\$request_uri;
+}
+EOF
+fi
+
+
+# Start the upstream blocks for sites that need them
+if [ "$TEMPLATE" = "post" ]; then
+cat << EOF >> "/etc/nginx/conf.d/docker/$DOCKER_NAME.conf"
+upstream $DOCKER_NAME {
+  server $DOCKER_NAME:$DOCKER_PORT;
+}
+EOF
+fi
+if [ "$TEMPLATE" = "django" ]; then
+cat << EOF >> "/etc/nginx/conf.d/docker/$DOCKER_NAME.conf"
+upstream $DOCKER_NAME {
+  server $DOCKER_NAME:$DOCKER_PORT;
+}
+EOF
+fi
+
+
+echo 'Testing new configuration ...'
+nginx -t
+echo 'OK'
+echo 'done.'
+echo "Reloading Nginx with the self-signed certificates for $DOAMIN ..."
+nginx -s reload
+echo 'done'
+
+echo 'Finished'

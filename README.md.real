@@ -44,8 +44,8 @@
    don't have this, follow the comments in `web/Dockerfile` to take a different
    approach without the caching.
 
-   Your will be hosted then at http://localhost:8000 (the port may be different if
-   you configured a different `PORT` variable).
+   Your site will be hosted then at http://localhost:8000 (the port may be
+   different if you configured a different `PORT` variable).
 
    Optionally you can run `docker-compose build awscli gitcli` to build those
    containers. This could be useful if you don't have `git` installed and wish to
@@ -55,51 +55,61 @@
 5. Set up aliases
 
    It can be a bit tedious typing the full `docker-compose` commands you need, so
-   you can alias them to shorter versions. You'll need to do this each time you
-   start working in a new terminal.
+   you can alias them to shorter versions.
+
+   There are two ways to do this, the first assumes that the containers are
+   already running and that you want to execute the commands using the
+   running containers. For example:
+
+   ```
+   alias mysite_manage.py="docker exec -it mysite_web_1 python3 manage.py"
+   ```
+
+   The second approach creates a new container just to run the command.
+   For example:
 
    ```
    alias mysite_manage.py="docker-compose -f `pwd`/docker-compose.yml run --rm web python3 manage.py"
-   alias mysite_autopep8="docker-compose -f `pwd`/docker-compose.yml run --rm web /usr/bin/autopep8"
-   alias mysite_psql="docker-compose -f `pwd`/docker-compose.yml run --rm db psql"
-   # For CLIs
-   # alias mysite_git="docker-compose -f `pwd`/docker-compose.yml run --rm gitcli"
-   # alias mysite_aws="docker-compose -f `pwd`/docker-compose.yml run --rm awscli"
-   # For geo:
-   # alias mysite_ogrinfo="docker-compose -f `pwd`/docker-compose.yml run --rm web ogrinfo"
-   # alias mysite_ogrinspect="docker-compose -f `pwd`/docker-compose.yml run --rm web ogrinspect"
    ```
 
-   The commands above all start new containers. If you happen to have the
-   container running already it can be more efficient to exec the command in the
-   currently running container. Set up these aliases too:
+   We'll use the first approach for the web and db containers, and the second
+   appraoch for the cli containers.
+
+   You'll need to set up these aliases each time you start working in a new terminal.
 
    Note: If the directory containing this one is not named `mysite` then you'll
    need to adjust the prefix of each of the container names.
 
    ```
-   alias mysite_running_manage.py="docker exec -it mysite_web_1 python3 manage.py"
-   alias mysite_running_web_sh="docker exec -it mysite_web_1 /bin/sh"
-   alias mysite_running_autopep8="docker exec -it mysite_web_1 /usr/bin/autopep8"
-   alias mysite_running_psql="docker exec -it mysite_db_1 psql"
+   alias mysite_manage.py="docker exec -it mysite_web_1 python3 manage.py"
+   alias mysite_noninteractive_manage.py="docker exec mysite_web_1 python3 manage.py"
+   alias mysite_web_sh="docker exec -it mysite_web_1 /bin/sh"
+   alias mysite_autopep8="docker exec -it mysite_web_1 /usr/bin/autopep8"
+   alias mysite_psql="docker exec -it mysite_db_1 psql"
    # For geo:
-   # alias mysite_running_ogrinfo="docker exec mysite_web_1 ogrinfo"
-   # alias mysite_running_ogrinspect="docker exec mysite_web_1 ogrinspect"
+   # alias mysite_ogrinfo="docker exec mysite_web_1 ogrinfo"
+   # alias mysite_ogrinspect="docker exec mysite_web_1 ogrinspect"
+   # For CLIs
+   # alias mysite_git="docker-compose -f `pwd`/docker-compose.yml run --rm gitcli"
+   # alias mysite_aws="docker-compose -f `pwd`/docker-compose.yml run --rm awscli"
    ```
+
+   Docker tip: If you want to run interactive commands you need to add `-it`
+   flags after the `run` or `exec` parts of the alias.
 
 6. Set up the database:
 
-   You can use your new `manage.py` alias or `running_manage.py`:
+   You can use your new aliases to set up the database:
 
    ```
    # Checks there are no migrations to be created (there shouldn't be if you've made no changes yet)
-   mysite_running_manage.py makemigrations
+   mysite_noninteractive_manage.py makemigrations
    # Set up the database
-   mysite_running_manage.py migrate
+   mysite_noninteractive_manage.py migrate
    # Change the default site to serve from port 8000 (which is the port the `web` container uses internally.
-   mysite_running_manage.py loaddata mysite/settings/base_09_wagtail_site.json
+   mysite_noninteractive_manage.py loaddata mysite/settings/base_09_wagtail_site.json
    # Set up the default theme for Wagtail
-   mysite_running_manage.py loaddata mysite/settings/base_09_wagtail_theme.json
+   mysite_noninteractive_manage.py loaddata mysite/settings/base_09_wagtail_theme.json
    ```
 
 7. Create a superuser
@@ -119,10 +129,10 @@
    password. You can do this like this:
 
    ```
-   mysite_running_manage.py loaddata mysite/settings/base_08_user.json
+   mysite_noninteractive_manage.py loaddata mysite/settings/base_08_user.json
    ```
 
-   This creates a user with `me@example.com` as the email and the password
+   This creates a user with `admin@example.com` as the email and the password
    `123123ab`. You can use it to log in to the admin at `/admin` and change the
    email in AUTHENTICATION AND AUTHORIZATION -> Users.
 
@@ -142,11 +152,11 @@ You can connect to the PostgreSQL database using the `psql` command you aliased
 above which really runs in your `db` container:
 
 ```
-mysite_running_psql -h db -U postgres postgres
+mysite_psql -h db -U postgres postgres
 ```
 
 In development remember to clear your browser cache once you've changed static
-files and run `mysite_running_manage.py collectstatic` by restarting the Docker
+files and run `mysite_manage.py collectstatic` by restarting the Docker
 container. Otherwise the browser will use the cached old version.
 
 
@@ -158,7 +168,7 @@ generated project. This is Django best practice.
 With your aliases set up, create an app with:
 
 ```
-mysite_running_manage.py startapp myapp
+mysite_noninteractive_manage.py startapp myapp
 ```
 
 ### Customise User Model
@@ -185,7 +195,7 @@ Once you've written tests, you can run them like this:
 
 ```
 docker-compose up -d chrome
-mysite_running_manage.py test --failfast -k mysite/test
+mysite_manage.py test --failfast -k mysite/test
 ```
 
 You can use VNC Viewer to view Chrome while the tests are running.
@@ -298,7 +308,7 @@ Once this is done, check out HEROKU.md for Heroku instructions or EC2.md for EC2
   web:
     ...
     environment:
-      DJANGO_SETTINGS_MODULE: test2.settings.production
+      DJANGO_SETTINGS_MODULE: mysite.settings.production
       ...
     command: /bin/sh /code/run.sh
   ```
@@ -323,21 +333,11 @@ Once this is done, check out HEROKU.md for Heroku instructions or EC2.md for EC2
 * Set up your Nginx shell alias and start the shell:
 
   ```
-  alias test2_running_nginx_sh="docker exec -it test2_nginx_1 sh"
-  test2_running_nginx_sh
+  alias mysite_nginx_sh="docker exec -it mysite_nginx_1 sh"
+  mysite_nginx_sh
   ```
 
-* Set up the new domain, get the certificate and install it using the `new-domain` command. This takes the domain (without `www.`) then the internal Docker name of the machine you want to proxy to, then the port to on that machine. In this case you want to proxy to your Django app running in `web` on port 8000. NOTE: You must not specify `www.` in the command as this will be added automatically. Type `exit` to exit the shell when you are done.
-
-  ```
-  new-domain example.com web 8000
-  ```
-
-
-NOTE: For testing you can edit /bin/new-domain and follow the instructions in
-the comment to add the `--server` flag to the `lego` commands to use the
-staging server.
-
+See `nginx/README.md` for more information.
 
 ## Backup and Restore
 

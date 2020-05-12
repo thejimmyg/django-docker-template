@@ -5,7 +5,7 @@
 
 FROM alpine:3.11 as runbase
 RUN apk update
-RUN apk add --no-cache python3 postgresql-client libpq jpeg zlib libffi
+RUN apk add --no-cache tini python3 postgresql-client libpq jpeg zlib libffi
 # Start geo
 # RUN apk add --no-cache gdal geos proj proj-datumgrid geoip
 # RUN ln -s /usr/lib/libproj.so.15.1.0 /usr/lib/libproj.so
@@ -63,4 +63,5 @@ USER django
 WORKDIR /code/
 COPY . /code/
 EXPOSE 8000
+ENTRYPOINT ["/sbin/tini", "-g", "--"]
 CMD ["/bin/sh", "/code/run.sh"]

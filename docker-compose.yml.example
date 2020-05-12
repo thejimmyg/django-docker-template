@@ -1,46 +1,6 @@
 version: "3.7"
 
 services:
-  # awscli:
-  #   build: awscli
-  #   environment:
-  #     AWS_ACCESS_KEY_ID: XXX
-  #     AWS_SECRET_ACCESS_KEY: XXX
-  # gitcli:
-  #   build: gitcli
-  #   environment:
-  #     GIT_COMMITTER_NAME: 'Your name'
-  #     GIT_COMMITTER_EMAIL: ''
-  #     GIT_AUTHOR_NAME: 'Your name'
-  #     GIT_AUTHOR_EMAIL: ''
-  #     GIT_SSH_COMMAND: 'ssh -i /ssh/id_rsa'
-  #   volumes:
-  #     - ./git/ssh:/ssh
-  #     - ./:/repo/
-  # nginx:
-  #   build: ./nginx
-  #   volumes:
-  #     - ./nginx/conf.d/docker.conf:/etc/nginx/conf.d/docker.conf:ro
-  #     - ./nginx/conf.d/docker:/etc/nginx/conf.d/docker:rw
-  #     - ./nginx/daily:/etc/periodic/daily:rw
-  #     - ./nginx/letsencrypt:/letsencrypt:rw
-  #     - ./nginx/webroot/:/webroot/:rw
-  #     # Add any other host-specific mounts here
-  #     - ./web/media/:/media/web/:ro
-  #     - ./web/staticcache/:/static/web/:ro
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   environment:
-  #     # The docker container will accept the Let's Encrypt terms for you using this email address. Only put the email of someone who is willing to accept the terms.
-  #     LETS_ENCRYPT_EMAIL: "james@example.com"
-  chrome:
-    image: selenium/standalone-chrome-debug:3.141.59-radium
-    volumes:
-      - /dev/shm:/dev/shm
-    ports:
-      - "5900:5900"
-      - "4444:4444"
   db:
     # image: postgis/postgis:12-3.0-alpine
     # image: arm32v7/postgres:12.2-alpine
@@ -80,3 +40,53 @@ services:
       SERVER_EMAIL: james@example.com
     # command: /bin/sh /code/run.sh
     command: /bin/sh /code/run.sh.dev
+
+  #
+  # These are other example configurations you may need for the other containers
+  #
+
+  # awscli:
+  #   build: awscli
+  #   environment:
+  #     AWS_ACCESS_KEY_ID: XXX
+  #     AWS_SECRET_ACCESS_KEY: XXX
+  # gitcli:
+  #   build: gitcli
+  #   environment:
+  #     GIT_COMMITTER_NAME: 'Your name'
+  #     GIT_COMMITTER_EMAIL: ''
+  #     GIT_AUTHOR_NAME: 'Your name'
+  #     GIT_AUTHOR_EMAIL: ''
+  #     GIT_SSH_COMMAND: 'ssh -i /ssh/id_rsa'
+  #   volumes:
+  #     - ./git/ssh:/ssh
+  #     - ./:/repo/
+  # nginx:
+  #   build:
+  #     context: ./nginx
+  #   environment:
+  #     # The docker container will accept the Let's Encrypt terms for you using this email address. Only put the email of someone who is willing to accept the terms.
+  #     LETS_ENCRYPT_EMAIL: james@example.com
+  #     LETS_ENCRYPT_USER: 1001:1001
+  #     NGINX_UID: 1001
+  #     NGINX_GID: 1001
+  #   ports:
+  #   - 80:80/tcp
+  #   - 443:443/tcp
+  #   restart: unless-stopped
+  #   volumes:
+  #   - ./nginx/conf.d/docker.conf:/etc/nginx/conf.d/docker.conf:ro
+  #   - ./nginx/conf.d/docker:/etc/nginx/conf.d/docker:rw
+  #   - ./nginx/daily:/etc/periodic/daily:rw
+  #   - ./nginx/letsencrypt:/letsencrypt:rw
+  #   - ./www.teratree.org:/webroot/www.teratree.org:rw
+  #   # Add any other host-specific mounts here
+  #   - ./web/media/:/webroot/some.example.com/media:ro
+  #   - ./web/staticcache/:/webroot/some.example.com/static:ro
+  # chrome:
+  #   image: selenium/standalone-chrome-debug:3.141.59-radium
+  #   volumes:
+  #     - /dev/shm:/dev/shm
+  #   ports:
+  #     - "5900:5900"
+  #     - "4444:4444"

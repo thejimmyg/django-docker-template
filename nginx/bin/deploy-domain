@@ -1,0 +1,63 @@
+#!/bin/sh
+
+set -e
+
+DOCKER_NAME=$1
+MODE=$2
+DOMAIN=$3
+
+
+if [ "$MODE" = "bare" ]; then
+    # Add this to the lego commands for testing with the staging server:
+    # --server=https://acme-staging-v02.api.letsencrypt.org/directory
+    echo 'Attempting to get live certificates ...'
+    su-exec "$LETS_ENCRYPT_USER" lego --accept-tos -m "$LETS_ENCRYPT_EMAIL" --http --http.webroot "/webroot/$DOMAIN" -d "$DOMAIN" --path /letsencrypt run
+    echo 'done'
+    
+    echo "Reloading Nginx with the live certificates for $DOAMIN ..."
+    nginx -s reload
+    echo 'done'
+    
+    echo 'Adding the renew task to the daily cronjob ...'
+    cat << EOF >> "/etc/periodic/daily/$DOMAIN"
+#!/bin/sh
+
+set -e
+
+echo "Cron running for $DOMAIN ... Sleeping ..."
+sleep `tr -cd "[:digit:]" < /dev/urandom | head -c 4 # 9,999 seconds - roughly 2 hours 45m `
+echo "Awake for $DOMAIN ... Renewing ..."
+su-exec "$LETS_ENCRYPT_USER" lego --email="$LETS_ENCRYPT_EMAIL" --domains "$DOMAIN" --http --http.webroot "/webroot/$DOMAIN" --path /letsencrypt renew --days 30 --renew-hook="nginx -s reload"
+echo "All done."
+EOF
+    echo 'done.'
+else
+    # Add this to the lego commands for testing with the staging server:
+    # --server=https://acme-staging-v02.api.letsencrypt.org/directory
+    echo 'Attempting to get live certificates ...'
+    su-exec "$LETS_ENCRYPT_USER" lego --accept-tos -m "$LETS_ENCRYPT_EMAIL" --http --http.webroot "/webroot/www.$DOMAIN" -d "www.$DOMAIN" -d "$DOMAIN" --path /letsencrypt run
+    echo 'done'
+    
+    echo "Reloading Nginx with the live certificates for www.$DOAMIN ..."
+    nginx -s reload
+    echo 'done'
+    
+    echo 'Adding the renew task to the daily cronjob ...'
+    cat << EOF >> "/etc/periodic/daily/www.$DOMAIN"
+#!/bin/sh
+
+set -e
+
+echo "Cron running for www.$DOMAIN ... Sleeping ..."
+sleep `tr -cd "[:digit:]" < /dev/urandom | head -c 4 # 9,999 seconds - roughly 2 hours 45m `
+echo "Awake for www.$DOMAIN ... Renewing ..."
+su-exec "$LETS_ENCRYPT_USER" lego --email="$LETS_ENCRYPT_EMAIL" --domains="www.$DOMAIN" --domains "$DOMAIN" --http --http.webroot "/webroot/www.$DOMAIN" --path /letsencrypt renew --days 30 --renew-hook="nginx -s reload"
+echo "All done."
+EOF
+    echo 'done.'
+fi
+
+echo 'Checking cron ...'
+run-parts --test /etc/periodic/daily
+echo 'done'
+echo 'Finished'

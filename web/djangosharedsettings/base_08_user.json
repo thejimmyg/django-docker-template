@@ -6,10 +6,10 @@
     "password": "pbkdf2_sha256$180000$gZnGPu3yj7O8$ymUfV6f+BkCxBpzpgDCmgt8P5EY1rcfFkI8gmuypl8Y=",
     "last_login": null,
     "is_superuser": true,
-    "username": "james",
+    "username": "admin",
     "first_name": "",
     "last_name": "",
-    "email": "me@example.com",
+    "email": "admin@example.com",
     "is_staff": true,
     "is_active": true,
     "date_joined": "2020-03-26T16:48:37.753Z",
@@ -22,7 +22,7 @@
   "pk": 1,
   "fields": {
     "user": 1,
-    "email": "me@example.com",
+    "email": "admin@example.com",
     "verified": true,
     "primary": true
   }

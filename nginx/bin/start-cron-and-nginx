@@ -2,6 +2,11 @@
 
 set -e
 
+echo "Setting nginx user UID and GID to $NGINX_UID:$NGINX_GID ..."
+usermod -u "$NGINX_UID" nginx
+groupmod -g "$NGINX_GID" nginx
+echo 'done.'
+
 echo 'Starting Nginx ...'
 nginx # -g "daemon off;"
 echo 'done.'
