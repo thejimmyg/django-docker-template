@@ -61,11 +61,16 @@ fi
 
 # For debugging problems you could uncomment the echo commands below.
 mkdir -p "/webroot/$FULL_DOMAIN/.well-known/acme-challenge"
+chown -R "nginx:nginx" "/webroot/$FULL_DOMAIN"
 # echo "$FULL_DOMAIN -> $DOCKER_NAME webroot" > "/webroot/$FULL_DOMAIN/.well-known/acme-challenge/hello"
+if [ "$TEMPLATE" = "django" ]; then
 mkdir -p "/media/$FULL_DOMAIN/"
+chown -R "nginx:nginx" "/webroot/$FULL_DOMAIN"
 # echo "$FULL_DOMAIN -> $DOCKER_NAME media" > "/media/$FULL_DOMAIN/hello"
 mkdir -p "/static/$FULL_DOMAIN/"
+chown -R "nginx:nginx" "/webroot/$FULL_DOMAIN"
 # echo "$FULL_DOMAIN -> $DOCKER_NAME static" > "/static/$FULL_DOMAIN/hello"
+fi
 
 
 cat << EOF > "/etc/nginx/conf.d/docker/$DOCKER_NAME.conf"
@@ -216,6 +221,7 @@ upstream $DOCKER_NAME {
 EOF
 fi
 
+chown nginx:nginx "/etc/nginx/conf.d/docker/$DOCKER_NAME.conf"
 
 echo 'Testing new configuration ...'
 nginx -t

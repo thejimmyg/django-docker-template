@@ -107,9 +107,9 @@
    # Set up the database
    mysite_noninteractive_manage.py migrate
    # Change the default site to serve from port 8000 (which is the port the `web` container uses internally.
-   mysite_noninteractive_manage.py loaddata mysite/settings/base_09_wagtail_site.json
+   mysite_noninteractive_manage.py loaddata mysite/settings/base_10_wagtail_site.json
    # Set up the default theme for Wagtail
-   mysite_noninteractive_manage.py loaddata mysite/settings/base_09_wagtail_theme.json
+   mysite_noninteractive_manage.py loaddata mysite/settings/base_10_wagtail_theme.json
    ```
 
 7. Create a superuser
@@ -141,7 +141,7 @@
 Note the Wagtail page you see as the homepage comes directly from `Page` class
 which you won't use in future. You'll use a `HomePage` model instead that will
 use the same base template as other pages. Because you loaded the
-`base_09_wagtail_theme.json` fixture, the site is set up to use the `Default`
+`base_10_wagtail_theme.json` fixture, the site is set up to use the `Default`
 theme in `mysite/templates/theme/` which overrides `wagtailcore/page.html` to
 use `base.html`. `base.html` overriden itself in this theme to provide Home and
 Login links.

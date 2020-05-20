@@ -1,1 +1,1 @@
-from .base_09_wagtail import *
+from .base_10_wagtail import *

@@ -52,7 +52,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS('Successfully wiped the tables'))
 """
 
-from .base_08_allauth import *
+from .base_09_dj_rest_auth import *
 
 # Based on http://docs.wagtail.io/en/v2.5.1/advanced_topics/settings.html
 for middleware in [

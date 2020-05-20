@@ -79,7 +79,9 @@ services:
   #   - ./nginx/conf.d/docker:/etc/nginx/conf.d/docker:rw
   #   - ./nginx/daily:/etc/periodic/daily:rw
   #   - ./nginx/letsencrypt:/letsencrypt:rw
-  #   - ./www.teratree.org:/webroot/www.teratree.org:rw
+  #   - ./nginx/webroot:/webroot:rw
+  #   - ./nginx/static:/static:rw
+  #   - ./nginx/media:/media:rw
   #   # Add any other host-specific mounts here
   #   - ./web/media/:/webroot/some.example.com/media:ro
   #   - ./web/staticcache/:/webroot/some.example.com/static:ro
