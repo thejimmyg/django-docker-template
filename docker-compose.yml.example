@@ -38,6 +38,8 @@ services:
       EMAIL_HOST_PASSWORD: XXX
       EMAIL_HOST_USER: XXX
       SERVER_EMAIL: james@example.com
+      ENABLE_GEO: false
+      PREPEND_WWW: true
     # command: /bin/sh /code/run.sh
     command: /bin/sh /code/run.sh.dev
 

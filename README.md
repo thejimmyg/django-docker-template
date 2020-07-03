@@ -28,4 +28,4 @@ mv -f README.md.real README.md
 ## Potential Improvements
 
 * The current set up causes an infinite redirect if you register as a normal user and then try to access Wagtail or the Django admin. It should probably give an error message instead.
-* Nginx could perform the redirect to www. rather than Django?
+* Nginx could perform the redirect to www. rather than Django? (The redirect is now configured with the `PREPEND_WWW` environment vairbale).

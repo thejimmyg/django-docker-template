@@ -37,7 +37,7 @@ from .production_last import *
 
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 ALLOWED_HOSTS = [host.strip() for host in os.environ['ALLOWED_HOSTS'].split(',')]
-PREPEND_WWW = True
+PREPEND_WWW = os.environ.get('PREPEND_WWW', 'false').strip().lower() == 'true'
 EOF
   cat << EOF >> "mysite/urls.py"
 # Set up dev static erver
